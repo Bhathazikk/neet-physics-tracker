@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>NEET Physics Master Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+<style>
+    input[type=number] {
+        -moz-appearance: textfield;
+    }
+
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+        opacity: 1;
+    }
+</style>
+</head>
+
+<body class="bg-slate-950 text-slate-100 min-h-screen p-3 md:p-8">
+
+<div class="max-w-7xl mx-auto space-y-6">
+
+<!-- =====================================================
+     HEADER
+===================================================== -->
+
+<header class="bg-slate-900 border border-slate-800 rounded-2xl p-5 md:p-6 shadow-xl">
+
+    <div class="flex flex-col lg:flex-row justify-between gap-5">
+
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-emerald-400">
+                ⚡ NEET Physics Master Dashboard
+            </h1>
+
+            <p class="text-slate-400 text-sm mt-2">
+                Lecture: 2h • Revision: 35m/lecture • JEE PYQs: 15 Q/hr • NEET PYQs: ~2h/chapter
+            </p>
+        </div>
+
+        <div class="flex gap-2 flex-wrap">
+
+            <button onclick="exportData()"
+            class="bg-sky-500 hover:bg-sky-400 text-slate-950 px-4 py-2 rounded-xl font-bold">
+                Export
+            </button>
+
+            <button onclick="resetData()"
+            class="bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 px-4 py-2 rounded-xl font-bold">
+                Reset
+            </button>
+
+        </div>
+
+    </div>
+
+</header>
+
+
+<!-- =====================================================
+     TOTAL PREP
+===================================================== -->
+
+<div id="total-prep"></div>
+
+
+<!-- =====================================================
+     INDIVIDUAL METRICS
+===================================================== -->
+
+<div id="metrics"
+class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+</div>
+
+
+<!-- =====================================================
+     PROGRESS + TIME
+===================================================== -->
+
+<div class="grid lg:grid-cols-2 gap-4">
+
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+
+        <h2 class="font-bold text-lg mb-4 text-emerald-400">
+            📈 Progress
+        </h2>
+
+        <div id="progress-bars" class="space-y-4"></div>
+
+    </div>
+
+
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+
+        <h2 class="font-bold text-lg mb-4 text-emerald-400">
+            ⏱️ Remaining Work
+        </h2>
+
+        <div id="time-stats"
+        class="grid grid-cols-2 gap-3">
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- =====================================================
+     CHAPTER TABLE
+===================================================== -->
+
+<div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
+
+    <div class="p-5 border-b border-slate-800">
+
+        <h2 class="text-lg font-bold text-emerald-400">
+            📚 Chapter Tracker
+        </h2>
+
+        <p class="text-xs text-slate-500 mt-1">
+            Change the numbers whenever you complete more work. Your progress is saved automatically.
+        </p>
+
+    </div>
+
+
+    <div class="overflow-x-auto">
+
+        <table class="w-full text-left border-collapse text-sm">
+
+            <thead>
+
+                <tr class="bg-slate-800/60 text-slate-300 uppercase text-xs tracking-wider border-b border-slate-800">
+
+                    <th class="p-3 text-center">#</th>
+
+                    <th class="p-3">
+                        Chapter
+                    </th>
+
+                    <th class="p-3 text-center">
+                        Lectures
+                    </th>
+
+                    <th class="p-3 text-center">
+                        Revision
+                    </th>
+
+                    <th class="p-3 text-center">
+                        JEE PYQs
+                    </th>
+
+                    <th class="p-3 text-center">
+                        NEET PYQs
+                    </th>
+
+                    <th class="p-3 text-center">
+                        Status
+                    </th>
+
+                </tr>
+
+            </thead>
+
+
+            <tbody id="tracker-table-body"
+            class="divide-y divide-slate-800/60">
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+</div>
+
+
+<script>
+
+/* =========================================================
+   CHAPTER DATA
+
+   name,
+   lecture total,
+   revision total,
+   JEE PYQ total,
+   lecture starting progress,
+   revision starting progress,
+   JEE starting progress,
+   NEET starting status
+========================================================= */
+
+const chapters = [
+
+["Units and Measurements",11,11,181,11,11,181,true],
+
+["Vectors & Mathematical Tools",21,21,42,21,21,42,true],
+
+["Motion in a Straight Line (1D)",12,12,90,12,12,90,true],
+
+["Motion in a Plane (2D)",11,11,87,11,11,87,true],
+
+["Laws of Motion",16,16,146,16,16,146,true],
+
+["Work, Energy and Power",9,9,103,9,9,103,true],
+
+["Center of Mass (COM)",8,8,76,8,0,0,false],
+
+["Rotational Motion",12,12,175,12,0,0,false],
+
+["Gravitation",7,7,158,7,0,0,false],
+
+["Mechanical Properties of Solids",4,4,71,4,0,0,false],
+
+["Mechanical Properties of Fluids",11,11,135,9,0,0,false],
+
+["Thermal Properties of Matter",9,9,71,9,0,0,false],
+
+["Thermodynamics",5,5,107,5,0,0,false],
+
+["Kinetic Theory of Gases (KTG)",3,3,111,3,0,0,false],
+
+["Oscillations",7,7,105,7,0,0,false],
+
+["Waves",6,6,77,6,0,0,false],
+
+["Electric Charges and Fields",12,12,129,12,0,0,false],
+
+["Electrostatic Potential and Capacitance",12,12,152,9,0,0,false],
+
+["Current Electricity",12,12,231,12,0,0,false],
+
+["Moving Charges and Magnetism",10,10,134,0,0,0,false],
+
+["Magnetism and Matter",3,3,39,0,0,0,false],
+
+["Electromagnetic Induction",4,4,112,0,0,0,false],
+
+["Alternating Current",7,7,134,0,0,0,false],
+
+["Electromagnetic Waves",2,2,114,0,0,0,false],
+
+["Ray Optics and Optical Instruments",13,13,194,0,0,0,false],
+
+["Wave Optics",5,5,102,5,0,0,false],
+
+["Dual Nature of Radiation and Matter",2,2,158,2,0,0,false],
+
+["Atoms",3,3,103,3,0,0,false],
+
+["Nuclei",2,2,57,2,0,0,false],
+
+["Semiconductor Electronics",5,5,140,2,0,0,false]
+
+];
+
+
+/* =========================================================
+   LOAD SAVED DATA
+========================================================= */
+
+let savedData =
+localStorage.getItem("neetPhysicsMasterDashboard");
+
+
+let data;
+
+
+if(savedData){
+
+    data = JSON.parse(savedData);
+
+}else{
+
+    data = chapters.map(c => ({
+
+        lec: c[4],
+
+        rev: c[5],
+
+        jee: c[6],
+
+        neet: c[7]
+
+    }));
+
+}
+
+
+/* =========================================================
+   SAVE DATA
+========================================================= */
+
+function saveData(){
+
+    localStorage.setItem(
+        "neetPhysicsMasterDashboard",
+        JSON.stringify(data)
+    );
+
+}
+
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function clamp(value,min,max){
+
+    value = Number(value);
+
+    if(isNaN(value))
+        value = 0;
+
+    return Math.max(
+        min,
+        Math.min(value,max)
+    );
+
+}
+
+
+function percentage(done,total){
+
+    if(total === 0)
+        return 0;
+
+    return (done/total)*100;
+
+}
+
+
+function formatNumber(number){
+
+    return Number(number).toLocaleString(
+        "en-IN",
+        {
+            maximumFractionDigits:1
+        }
+    );
+
+}
+
+
+/* =========================================================
+   UPDATE NUMBERS
+========================================================= */
+
+function updateValue(index,type,value){
+
+    let max;
+
+    if(type === "lec"){
+
+        max = chapters[index][1];
+
+    }
+
+    else if(type === "rev"){
+
+        max = chapters[index][2];
+
+    }
+
+    else if(type === "jee"){
+
+        max = chapters[index][3];
+
+    }
+
+
+    data[index][type] =
+        clamp(value,0,max);
+
+
+    saveData();
+
+    render();
+
+}
+
+
+/* =========================================================
+   NEET PYQ TOGGLE
+========================================================= */
+
+function toggleNeet(index){
+
+    data[index].neet =
+        !data[index].neet;
+
+    saveData();
+
+    render();
+
+}
+
+
+/* =========================================================
+   NUMBER INPUT
+========================================================= */
+
+function numberInput(
+    index,
+    type,
+    value,
+    total
+){
+
+return `
+
+<input
+
+type="number"
+
+min="0"
+
+max="${total}"
+
+value="${value}"
+
+onchange="updateValue(
+${index},
+'${type}',
+this.value
+)"
+
+class="w-16 md:w-20 bg-slate-950
+border border-slate-700
+focus:border-emerald-400
+rounded-lg px-2 py-1
+text-center text-white">
+
+`;
+
+}
+
+
+/* =========================================================
+   RENDER
+========================================================= */
+
+function render(){
+
+    let lectureDone = 0;
+    let lectureTotal = 0;
+
+    let revisionDone = 0;
+    let revisionTotal = 0;
+
+    let jeeDone = 0;
+    let jeeTotal = 0;
+
+    let neetDone = 0;
+    let neetTotal = chapters.length;
+
+
+    chapters.forEach((chapter,index)=>{
+
+        lectureDone += data[index].lec;
+        lectureTotal += chapter[1];
+
+        revisionDone += data[index].rev;
+        revisionTotal += chapter[2];
+
+        jeeDone += data[index].jee;
+        jeeTotal += chapter[3];
+
+        if(data[index].neet){
+            neetDone++;
+        }
+
+    });
+
+
+    /* =====================================================
+       TOTAL PREPARATION BY STUDY HOURS
+    ===================================================== */
+
+    /*
+       Your rates:
+
+       Lecture = 2 hours
+       Revision = 35 minutes
+       JEE PYQ = 15 questions/hour
+       NEET PYQ = 2 hours/chapter
+    */
+
+
+    let totalLectureHours =
+        lectureTotal * 2;
+
+
+    let completedLectureHours =
+        lectureDone * 2;
+
+
+    let totalRevisionHours =
+        revisionTotal * (35/60);
+
+
+    let completedRevisionHours =
+        revisionDone * (35/60);
+
+
+    let totalJEEHours =
+        jeeTotal / 15;
+
+
+    let completedJEEHours =
+        jeeDone / 15;
+
+
+    let totalNEETHours =
+        neetTotal * 2;
+
+
+    let completedNEETHours =
+        neetDone * 2;
+
+
+    let totalPreparationHours =
+        totalLectureHours +
+        totalRevisionHours +
+        totalJEEHours +
+        totalNEETHours;
+
+
+    let completedPreparationHours =
+        completedLectureHours +
+        completedRevisionHours +
+        completedJEEHours +
+        completedNEETHours;
+
+
+    let totalPrepPercentage =
+        (
+            completedPreparationHours /
+            totalPreparationHours
+        ) * 100;
+
+
+    let remainingPreparationHours =
+        totalPreparationHours -
+        completedPreparationHours;
+
+
+    /* =====================================================
+       TOTAL PREP CARD
+    ===================================================== */
+
+    document.getElementById(
+        "total-prep"
+    ).innerHTML = `
+
+<div class="bg-gradient-to-r
+from-emerald-500/20
+via-slate-900
+to-sky-500/20
+border border-emerald-500/30
+rounded-2xl p-5 md:p-7
+shadow-xl">
+
+<div class="flex flex-col md:flex-row
+md:items-center
+md:justify-between gap-5">
+
+<div>
+
+<div class="text-sm
+uppercase tracking-widest
+font-bold text-emerald-400">
+
+🔥 TOTAL PREPARATION
+
+</div>
+
+<div class="text-5xl md:text-6xl
+font-black mt-2">
+
+${totalPrepPercentage.toFixed(1)}%
+
+</div>
+
+<div class="text-slate-400 mt-2">
+
+${completedPreparationHours.toFixed(1)}
+hours completed
+/
+${totalPreparationHours.toFixed(1)}
+hours total
+
+</div>
+
+</div>
+
+
+<div class="md:w-1/2">
+
+<div class="flex justify-between
+text-sm mb-2">
+
+<span class="text-slate-400">
+Overall Progress
+</span>
+
+<span class="font-bold
+text-emerald-400">
+
+${totalPrepPercentage.toFixed(1)}%
+
+</span>
+
+</div>
+
+
+<div class="h-5
+bg-slate-800
+rounded-full
+overflow-hidden">
+
+<div class="h-full
+bg-emerald-400
+rounded-full
+transition-all duration-500"
+
+style="width:${Math.min(
+100,
+totalPrepPercentage
+)}%">
+
+</div>
+
+</div>
+
+
+<div class="text-xs
+text-slate-500 mt-2">
+
+${remainingPreparationHours.toFixed(1)}
+hours remaining
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+`;
+
+
+    /* =====================================================
+       INDIVIDUAL METRICS
+    ===================================================== */
+
+    const metrics = [
+
+        [
+            "🎥 Lectures",
+            percentage(
+                lectureDone,
+                lectureTotal
+            ),
+            `${lectureDone}/${lectureTotal}`
+        ],
+
+        [
+            "🔄 Revision",
+            percentage(
+                revisionDone,
+                revisionTotal
+            ),
+            `${revisionDone}/${revisionTotal}`
+        ],
+
+        [
+            "🟣 JEE Main PYQs",
+            percentage(
+                jeeDone,
+                jeeTotal
+            ),
+            `${formatNumber(jeeDone)}/${formatNumber(jeeTotal)}`
+        ],
+
+        [
+            "🟢 NEET PYQs",
+            percentage(
+                neetDone,
+                neetTotal
+            ),
+            `${neetDone}/${neetTotal} chapters`
+        ]
+
+    ];
+
+
+    document.getElementById(
+        "metrics"
+    ).innerHTML = metrics.map(
+        metric => `
+
+<div class="bg-slate-900
+border border-slate-800
+rounded-2xl p-4">
+
+<div class="text-xs
+text-slate-400
+uppercase font-bold">
+
+${metric[0]}
+
+</div>
+
+<div class="text-2xl
+font-black
+text-emerald-400 mt-1">
+
+${metric[1].toFixed(1)}%
+
+</div>
+
+<div class="text-xs
+text-slate-400 mt-1">
+
+${metric[2]}
+
+</div>
+
+<div class="h-2
+bg-slate-800
+rounded-full mt-3
+overflow-hidden">
+
+<div class="h-full
+bg-emerald-400"
+
+style="width:${Math.min(
+100,
+metric[1]
+)}%">
+
+</div>
+
+</div>
+
+</div>
+
+`
+    ).join("");
+
+
+    /* =====================================================
+       PROGRESS BARS
+    ===================================================== */
+
+    document.getElementById(
+        "progress-bars"
+    ).innerHTML = metrics.map(
+        metric => `
+
+<div>
+
+<div class="flex
+justify-between text-sm">
+
+<span>
+${metric[0]}
+</span>
+
+<b>
+${metric[1].toFixed(1)}%
+</b>
+
+</div>
+
+<div class="h-2
+bg-slate-800
+rounded-full mt-1
+overflow-hidden">
+
+<div class="h-full
+bg-sky-400"
+
+style="width:${Math.min(
+100,
+metric[1]
+)}%">
+
+</div>
+
+</div>
+
+</div>
+
+`
+    ).join("");
+
+
+    /* =====================================================
+       REMAINING WORK
+    ===================================================== */
+
+    let remainingLectures =
+        lectureTotal -
+        lectureDone;
+
+
+    let remainingRevision =
+        revisionTotal -
+        revisionDone;
+
+
+    let remainingJEE =
+        jeeTotal -
+        jeeDone;
+
+
+    let remainingNEET =
+        neetTotal -
+        neetDone;
+
+
+    let lectureHours =
+        remainingLectures * 2;
+
+
+    let revisionHours =
+        remainingRevision *
+        (35/60);
+
+
+    let jeeHours =
+        remainingJEE / 15;
+
+
+    let neetHours =
+        remainingNEET * 2;
+
+
+    let timeStats = [
+
+        [
+            "🎥 Lecture",
+            lectureHours.toFixed(1)+" h"
+        ],
+
+        [
+            "🔄 Revision",
+            revisionHours.toFixed(1)+" h"
+        ],
+
+        [
+            "🟣 JEE PYQs",
+            jeeHours.toFixed(1)+" h"
+        ],
+
+        [
+            "🟢 NEET PYQs",
+            neetHours.toFixed(1)+" h"
+        ],
+
+        [
+            "🔥 TOTAL",
+            (
+                lectureHours +
+                revisionHours +
+                jeeHours +
+                neetHours
+            ).toFixed(1)+" h"
+        ],
+
+        [
+            "Lectures left",
+            remainingLectures
+        ],
+
+        [
+            "JEE questions left",
+            formatNumber(remainingJEE)
+        ],
+
+        [
+            "NEET chapters left",
+            remainingNEET
+        ]
+
+    ];
+
+
+    document.getElementById(
+        "time-stats"
+    ).innerHTML = timeStats.map(
+        stat => `
+
+<div class="bg-slate-950
+rounded-xl p-3">
+
+<span class="text-xs
+text-slate-500">
+
+${stat[0]}
+
+</span>
+
+<div class="font-bold text-lg">
+
+${stat[1]}
+
+</div>
+
+</div>
+
+`
+    ).join("");
+
+
+    /* =====================================================
+       CHAPTER TABLE
+    ===================================================== */
+
+    const tbody =
+        document.getElementById(
+            "tracker-table-body"
+        );
+
+
+    tbody.innerHTML = chapters.map(
+        (chapter,index)=>{
+
+            let d = data[index];
+
+
+            let complete =
+                d.lec === chapter[1] &&
+                d.rev === chapter[2] &&
+                d.jee === chapter[3] &&
+                d.neet;
+
+
+            let started =
+                d.lec > 0 ||
+                d.rev > 0 ||
+                d.jee > 0 ||
+                d.neet;
+
+
+            let status;
+
+
+            if(complete){
+
+                status = `
+
+<span class="
+px-2 py-1
+rounded-full
+bg-emerald-500/20
+text-emerald-400">
+
+Complete
+
+</span>
+
+`;
+
+            }
+
+            else if(started){
+
+                status = `
+
+<span class="
+px-2 py-1
+rounded-full
+bg-amber-500/20
+text-amber-400">
+
+In Progress
+
+</span>
+
+`;
+
+            }
+
+            else{
+
+                status = `
+
+<span class="
+px-2 py-1
+rounded-full
+bg-slate-800
+text-slate-500">
+
+Not Started
+
+</span>
+
+`;
+
+            }
+
+
+            return `
+
+<tr class="
+hover:bg-slate-800/40
+transition-colors">
+
+<td class="
+p-3 text-center
+text-slate-500">
+
+${index+1}
+
+</td>
+
+
+<td class="
+p-3 font-medium">
+
+${chapter[0]}
+
+</td>
+
+
+<!-- LECTURES -->
+
+<td class="
+p-3 text-center
+whitespace-nowrap">
+
+${numberInput(
+    index,
+    "lec",
+    d.lec,
+    chapter[1]
+)}
+
+<span class="text-slate-500">
+
+/ ${chapter[1]}
+
+</span>
+
+<div class="
+text-xs text-slate-500
+mt-1">
+
+${percentage(
+    d.lec,
+    chapter[1]
+).toFixed(0)}%
+
+</div>
+
+</td>
+
+
+<!-- REVISION -->
+
+<td class="
+p-3 text-center
+whitespace-nowrap">
+
+${numberInput(
+    index,
+    "rev",
+    d.rev,
+    chapter[2]
+)}
+
+<span class="text-slate-500">
+
+/ ${chapter[2]}
+
+</span>
+
+<div class="
+text-xs text-slate-500
+mt-1">
+
+${percentage(
+    d.rev,
+    chapter[2]
+).toFixed(0)}%
+
+</div>
+
+</td>
+
+
+<!-- JEE PYQs -->
+
+<td class="
+p-3 text-center
+whitespace-nowrap">
+
+${numberInput(
+    index,
+    "jee",
+    d.jee,
+    chapter[3]
+)}
+
+<span class="text-slate-500">
+
+/ ${chapter[3]}
+
+</span>
+
+<div class="
+text-xs text-slate-500
+mt-1">
+
+${percentage(
+    d.jee,
+    chapter[3]
+).toFixed(0)}%
+
+</div>
+
+</td>
+
+
+<!-- NEET PYQs -->
+
+<td class="p-3 text-center">
+
+<button
+
+onclick="toggleNeet(${index})"
+
+class="px-3 py-1
+rounded-lg font-semibold
+${
+d.neet
+
+?
+
+"bg-emerald-500/20 text-emerald-400"
+
+:
+
+"bg-slate-800 text-slate-400"
+}">
+
+${d.neet ? "✓ Done" : "Pending"}
+
+</button>
+
+</td>
+
+
+<!-- STATUS -->
+
+<td class="
+p-3 text-center text-xs">
+
+${status}
+
+</td>
+
+</tr>
+
+`;
+
+        }
+
+    ).join("");
+
+}
+
+
+/* =====================================================
+   RESET
+========================================================= */
+
+function resetData(){
+
+    if(!confirm(
+        "Reset the dashboard to your original starting progress?"
+    )){
+
+        return;
+
+    }
+
+
+    data = chapters.map(
+        chapter => ({
+
+            lec: chapter[4],
+
+            rev: chapter[5],
+
+            jee: chapter[6],
+
+            neet: chapter[7]
+
+        })
+    );
+
+
+    saveData();
+
+    render();
+
+}
+
+
+/* =====================================================
+   EXPORT BACKUP
+========================================================= */
+
+function exportData(){
+
+    const file =
+        new Blob(
+            [
+                JSON.stringify(
+                    data,
+                    null,
+                    2
+                )
+            ],
+            {
+                type:"application/json"
+            }
+        );
+
+
+    const link =
+        document.createElement("a");
+
+
+    link.href =
+        URL.createObjectURL(file);
+
+
+    link.download =
+        "NEET-Physics-Progress.json";
+
+
+    link.click();
+
+}
+
+
+/* =====================================================
+   START DASHBOARD
+========================================================= */
+
+render();
+
+</script>
+
+</body>
+</html>
