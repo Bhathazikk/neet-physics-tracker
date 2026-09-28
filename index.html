@@ -3,193 +3,117 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>NEET Physics Master Dashboard</title>
-
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-
 <style>
-    input[type=number] {
-        -moz-appearance: textfield;
-    }
-
+    input[type=number] { -moz-appearance: textfield; }
     input[type=number]::-webkit-inner-spin-button,
-    input[type=number]::-webkit-outer-spin-button {
-        opacity: 1;
-    }
+    input[type=number]::-webkit-outer-spin-button { opacity: 1; }
 </style>
 </head>
-
 <body class="bg-slate-950 text-slate-100 min-h-screen p-3 md:p-8">
 
 <div class="max-w-7xl mx-auto space-y-6">
 
-<!-- =====================================================
-     HEADER & VIEW SELECTOR
-===================================================== -->
-
+<!-- HEADER & TABS -->
 <header class="bg-slate-900 border border-slate-800 rounded-2xl p-5 md:p-6 shadow-xl space-y-4">
-
     <div class="flex flex-col lg:flex-row justify-between gap-5 items-start lg:items-center">
-
         <div>
-            <h1 class="text-2xl md:text-3xl font-bold text-emerald-400">
-                ⚡ NEET Physics Master Dashboard
-            </h1>
-
-            <p class="text-slate-400 text-sm mt-1">
-                Lecture: 2h • Revision: 35m/lecture • JEE PYQs: 15 Q/hr • NEET PYQs: ~2h/chapter
-            </p>
+            <h1 class="text-2xl md:text-3xl font-bold text-emerald-400">⚡ NEET Physics Master Dashboard</h1>
+            <p class="text-slate-400 text-sm mt-1">Lecture: 2h • Revision: 35m/lecture • JEE PYQs: 15 Q/hr • NEET PYQs: ~2h/chapter</p>
         </div>
-
         <div class="flex gap-2 flex-wrap">
-
-            <button onclick="exportData()"
-            class="bg-sky-500 hover:bg-sky-400 text-slate-950 px-4 py-2 rounded-xl font-bold text-sm">
-                Export
-            </button>
-
-            <button onclick="resetData()"
-            class="bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 px-4 py-2 rounded-xl font-bold text-sm">
-                Reset
-            </button>
-
+            <button onclick="exportData()" class="bg-sky-500 hover:bg-sky-400 text-slate-950 px-4 py-2 rounded-xl font-bold text-sm">Export</button>
+            <button onclick="resetData()" class="bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 px-4 py-2 rounded-xl font-bold text-sm">Reset</button>
         </div>
-
     </div>
-
-    <!-- View Selector Tabs -->
     <div class="flex gap-2 border-t border-slate-800 pt-4">
-        <button onclick="switchView('net')" id="tab-net"
-        class="px-4 py-2 rounded-xl font-bold text-sm transition-all bg-emerald-500 text-slate-950">
-            📊 Net Dashboard
-        </button>
-
-        <button onclick="switchView('daily')" id="tab-daily"
-        class="px-4 py-2 rounded-xl font-bold text-sm transition-all bg-slate-800 text-slate-400 hover:text-white">
-            📅 Daily Calendar
-        </button>
-
-        <button onclick="switchView('monthly')" id="tab-monthly"
-        class="px-4 py-2 rounded-xl font-bold text-sm transition-all bg-slate-800 text-slate-400 hover:text-white">
-            🗓️ Monthly Summary
-        </button>
+        <button onclick="switchView('net')" id="tab-net" class="px-4 py-2 rounded-xl font-bold text-sm transition-all bg-emerald-500 text-slate-950">📊 Net Dashboard</button>
+        <button onclick="switchView('daily')" id="tab-daily" class="px-4 py-2 rounded-xl font-bold text-sm transition-all bg-slate-800 text-slate-400 hover:text-white">📅 Daily Dashboard & Input</button>
+        <button onclick="switchView('monthly')" id="tab-monthly" class="px-4 py-2 rounded-xl font-bold text-sm transition-all bg-slate-800 text-slate-400 hover:text-white">🗓️ Monthly Summary</button>
     </div>
-
 </header>
 
-
-<!-- =====================================================
-     VIEWS CONTAINER
-===================================================== -->
-
-<div id="view-container" class="space-y-6">
-    <!-- Rendered dynamically based on active view -->
-</div>
+<div id="view-container" class="space-y-6"></div>
 
 </div>
-
 
 <script>
-
-/* =========================================================
-   CHAPTER DATA & STATE
-========================================================= */
-
 const chapters = [
-    ["Units and Measurements",11,11,181,11,11,181,true],
-    ["Vectors & Mathematical Tools",21,21,42,21,21,42,true],
-    ["Motion in a Straight Line (1D)",12,12,90,12,12,90,true],
-    ["Motion in a Plane (2D)",11,11,87,11,11,87,true],
-    ["Laws of Motion",16,16,146,16,16,146,true],
-    ["Work, Energy and Power",9,9,103,9,9,103,true],
-    ["Center of Mass (COM)",8,8,76,8,0,0,false],
-    ["Rotational Motion",12,12,175,12,0,0,false],
-    ["Gravitation",7,7,158,7,0,0,false],
-    ["Mechanical Properties of Solids",4,4,71,4,0,0,false],
-    ["Mechanical Properties of Fluids",11,11,135,9,0,0,false],
-    ["Thermal Properties of Matter",9,9,71,9,0,0,false],
-    ["Thermodynamics",5,5,107,5,0,0,false],
-    ["Kinetic Theory of Gases (KTG)",3,3,111,3,0,0,false],
-    ["Oscillations",7,7,105,7,0,0,false],
-    ["Waves",6,6,77,6,0,0,false],
-    ["Electric Charges and Fields",12,12,129,12,0,0,false],
-    ["Electrostatic Potential and Capacitance",12,12,152,9,0,0,false],
-    ["Current Electricity",12,12,231,12,0,0,false],
-    ["Moving Charges and Magnetism",10,10,134,0,0,0,false],
-    ["Magnetism and Matter",3,3,39,0,0,0,false],
-    ["Electromagnetic Induction",4,4,112,0,0,0,false],
-    ["Alternating Current",7,7,134,0,0,0,false],
-    ["Electromagnetic Waves",2,2,114,0,0,0,false],
-    ["Ray Optics and Optical Instruments",13,13,194,0,0,0,false],
-    ["Wave Optics",5,5,102,5,0,0,false],
-    ["Dual Nature of Radiation and Matter",2,2,158,2,0,0,false],
-    ["Atoms",3,3,103,3,0,0,false],
-    ["Nuclei",2,2,57,2,0,0,false],
-    ["Semiconductor Electronics",5,5,140,2,0,0,false]
+    ["Units and Measurements",11,11,181],
+    ["Vectors & Mathematical Tools",21,21,42],
+    ["Motion in a Straight Line (1D)",12,12,90],
+    ["Motion in a Plane (2D)",11,11,87],
+    ["Laws of Motion",16,16,146],
+    ["Work, Energy and Power",9,9,103],
+    ["Center of Mass (COM)",8,8,76],
+    ["Rotational Motion",12,12,175],
+    ["Gravitation",7,7,158],
+    ["Mechanical Properties of Solids",4,4,71],
+    ["Mechanical Properties of Fluids",11,11,135],
+    ["Thermal Properties of Matter",9,9,71],
+    ["Thermodynamics",5,5,107],
+    ["Kinetic Theory of Gases (KTG)",3,3,111],
+    ["Oscillations",7,7,105],
+    ["Waves",6,6,77],
+    ["Electric Charges and Fields",12,12,129],
+    ["Electrostatic Potential and Capacitance",12,12,152],
+    ["Current Electricity",12,12,231],
+    ["Moving Charges and Magnetism",10,10,134],
+    ["Magnetism and Matter",3,3,39],
+    ["Electromagnetic Induction",4,4,112],
+    ["Alternating Current",7,7,134],
+    ["Electromagnetic Waves",2,2,114],
+    ["Ray Optics and Optical Instruments",13,13,194],
+    ["Wave Optics",5,5,102],
+    ["Dual Nature of Radiation and Matter",2,2,158],
+    ["Atoms",3,3,103],
+    ["Nuclei",2,2,57],
+    ["Semiconductor Electronics",5,5,140]
 ];
 
 let currentView = "net";
-
-let savedData = localStorage.getItem("neetPhysicsMasterDashboard");
-let savedLogs = localStorage.getItem("neetPhysicsMasterLogs");
-let savedDailySnapshots = localStorage.getItem("neetPhysicsDailySnapshots");
-
-let data;
-let dailyLogs = savedLogs ? JSON.parse(savedLogs) : {};
-let dailySnapshots = savedDailySnapshots ? JSON.parse(savedDailySnapshots) : {};
+let savedLogs = localStorage.getItem("neetPhysicsMasterDailyLogs");
+let dailyLogs = savedLogs ? JSON.parse(savedLogs) : {}; 
 
 let calendarDate = new Date();
 let selectedCalendarDate = getTodayKey();
 
-if(savedData){
-    data = JSON.parse(savedData);
-} else {
-    data = chapters.map(c => ({
-        lec: c[4],
-        rev: c[5],
-        jee: c[6],
-        neet: c[7]
-    }));
-}
-
 function saveData(){
-    localStorage.setItem("neetPhysicsMasterDashboard", JSON.stringify(data));
-    localStorage.setItem("neetPhysicsMasterLogs", JSON.stringify(dailyLogs));
-    localStorage.setItem("neetPhysicsDailySnapshots", JSON.stringify(dailySnapshots));
+    localStorage.setItem("neetPhysicsMasterDailyLogs", JSON.stringify(dailyLogs));
 }
 
-// Custom date key function: shifts day boundary to 3:00 AM
-function getTodayKey(){
-    const d = new Date();
+function getTodayKey(customDate = new Date()){
+    let d = new Date(customDate);
     if(d.getHours() < 3){
         d.setDate(d.getDate() - 1);
     }
     return d.toISOString().split('T')[0];
 }
 
-function checkDailySnapshot(){
-    const today = getTodayKey();
-    if(!dailySnapshots[today]){
-        // If a new day starts, the baseline minimum for today is whatever total progress we had up to this point
-        dailySnapshots[today] = JSON.parse(JSON.stringify(data));
-    }
-}
-checkDailySnapshot();
-
-function logActivity(type, delta){
-    if(delta === 0) return;
-    const today = getTodayKey();
-    if(!dailyLogs[today]){
-        dailyLogs[today] = { lec: 0, rev: 0, jee: 0, neet: 0 };
-    }
-    dailyLogs[today][type] += delta;
+function getActiveDateKey(){
+    return selectedCalendarDate;
 }
 
+// Net data calculation incorporating 3 AM cutoff rule
+function getNetData(){
+    let todayKey = getTodayKey(new Date());
+    let netData = chapters.map(() => ({ lec: 0, rev: 0, jee: 0, neet: false }));
 
-/* =========================================================
-   GLOBAL TOTALS HELPER
-========================================================= */
+    Object.keys(dailyLogs).forEach(dateStr => {
+        if(dateStr < todayKey){
+            const chapLogs = dailyLogs[dateStr];
+            Object.keys(chapLogs).forEach(chIdx => {
+                let idx = Number(chIdx);
+                netData[idx].lec += chapLogs[idx].lec || 0;
+                netData[idx].rev += chapLogs[idx].rev || 0;
+                netData[idx].jee += chapLogs[idx].jee || 0;
+                if(chapLogs[idx].neet) netData[idx].neet = true;
+            });
+        }
+    });
+    return netData;
+}
 
 function getMasterTotals(){
     let lectureTotal = 0, revisionTotal = 0, jeeTotal = 0, neetTotal = chapters.length;
@@ -198,15 +122,9 @@ function getMasterTotals(){
         revisionTotal += c[2];
         jeeTotal += c[3];
     });
-
     let totalPrepHours = (lectureTotal * 2) + (revisionTotal * (35/60)) + (jeeTotal / 15) + (neetTotal * 2);
     return { lectureTotal, revisionTotal, jeeTotal, neetTotal, totalPrepHours };
 }
-
-
-/* =========================================================
-   HELPERS
-========================================================= */
 
 function clamp(value, min, max){
     value = Number(value);
@@ -236,93 +154,68 @@ function switchView(view){
     render();
 }
 
+function saveChapterLogForActiveDate(event){
+    event.preventDefault();
+    let targetDate = getActiveDateKey();
+    let todayKey = getTodayKey(new Date());
 
-/* =========================================================
-   UPDATE NUMBERS (PERMANENTLY LOCKED FLOOR)
-========================================================= */
+    if(targetDate < todayKey){
+        alert("This day is already locked past the 3:00 AM cutoff and cannot be edited.");
+        return;
+    }
 
-function updateValue(index, type, value){
-    checkDailySnapshot();
-    const today = getTodayKey();
+    let chapterIndex = document.getElementById("select-chapter").value;
+    if(chapterIndex === "") {
+        alert("Please select a chapter.");
+        return;
+    }
+
+    let lec = clamp(document.getElementById("input-lec").value, 0, chapters[chapterIndex][1]);
+    let rev = clamp(document.getElementById("input-rev").value, 0, chapters[chapterIndex][2]);
+    let jee = clamp(document.getElementById("input-jee").value, 0, chapters[chapterIndex][3]);
+    let neet = document.getElementById("input-neet").checked;
+
+    if(!dailyLogs[targetDate]) dailyLogs[targetDate] = {};
     
-    // Find the absolute lowest allowed value (the baseline from the start of today, which includes all past days)
-    let baseline = dailySnapshots[today][index][type];
-    let max;
+    // If all are zero/false, remove entry, else save
+    if(lec === 0 && rev === 0 && jee === 0 && !neet){
+        delete dailyLogs[targetDate][chapterIndex];
+        if(Object.keys(dailyLogs[targetDate]).length === 0) delete dailyLogs[targetDate];
+    } else {
+        dailyLogs[targetDate][chapterIndex] = { lec, rev, jee, neet };
+    }
 
-    if(type === "lec") max = chapters[index][1];
-    else if(type === "rev") max = chapters[index][2];
-    else if(type === "jee") max = chapters[index][3];
+    saveData();
+    render();
+}
 
-    let newValue = clamp(value, 0, max);
+function removeChapterLog(index){
+    let targetDate = getActiveDateKey();
+    let todayKey = getTodayKey(new Date());
 
-    if(newValue < baseline){
-        alert(`🔒 Locked! You cannot reduce or edit progress completed before today's 3:00 AM cutoff.`);
+    if(targetDate < todayKey){
+        alert("This day is locked past the 3:00 AM cutoff.");
+        return;
+    }
+
+    if(dailyLogs[targetDate] && dailyLogs[targetDate][index]){
+        delete dailyLogs[targetDate][index];
+        if(Object.keys(dailyLogs[targetDate]).length === 0) delete dailyLogs[targetDate];
+        saveData();
         render();
-        return;
     }
-
-    const oldValue = data[index][type];
-    const delta = newValue - oldValue;
-
-    data[index][type] = newValue;
-    logActivity(type, delta);
-
-    saveData();
-    render();
 }
-
-function toggleNeet(index){
-    checkDailySnapshot();
-    const today = getTodayKey();
-    const baselineNeet = dailySnapshots[today][index].neet;
-    const currentNeet = data[index].neet;
-
-    if(baselineNeet && !currentNeet){
-        alert(`🔒 Locked! This NEET chapter was completed before today's 3:00 AM cutoff and cannot be undone.`);
-        return;
-    }
-
-    const newStatus = !currentNeet;
-    data[index].neet = newStatus;
-
-    const delta = newStatus ? 1 : -1;
-    logActivity('neet', delta);
-
-    saveData();
-    render();
-}
-
-function numberInput(index, type, value, total){
-    return `
-    <input type="number" min="0" max="${total}" value="${value}"
-    onchange="updateValue(${index}, '${type}', this.value)"
-    class="w-16 md:w-20 bg-slate-950 border border-slate-700 focus:border-emerald-400 rounded-lg px-2 py-1 text-center text-white">
-    `;
-}
-
-
-/* =========================================================
-   RENDER ENGINE
-========================================================= */
 
 function render(){
     const container = document.getElementById("view-container");
-
-    if(currentView === 'net'){
-        container.innerHTML = renderNetDashboard();
-    } else if(currentView === 'daily'){
-        container.innerHTML = renderDailyDashboard();
-    } else if(currentView === 'monthly'){
-        container.innerHTML = renderMonthlyDashboard();
-    }
+    if(currentView === 'net') container.innerHTML = renderNetDashboard();
+    else if(currentView === 'daily') container.innerHTML = renderDailyDashboard();
+    else if(currentView === 'monthly') container.innerHTML = renderMonthlyDashboard();
 }
 
-
-/* =========================================================
-   1. NET DASHBOARD VIEW
-========================================================= */
-
+// NET DASHBOARD WITH CHAPTER TABLE
 function renderNetDashboard(){
+    let data = getNetData();
     let lectureDone = 0, lectureTotal = 0;
     let revisionDone = 0, revisionTotal = 0;
     let jeeDone = 0, jeeTotal = 0;
@@ -338,17 +231,8 @@ function renderNetDashboard(){
         if(data[index].neet) neetDone++;
     });
 
-    let totalLectureHours = lectureTotal * 2;
-    let completedLectureHours = lectureDone * 2;
-    let totalRevisionHours = revisionTotal * (35/60);
-    let completedRevisionHours = revisionDone * (35/60);
-    let totalJEEHours = jeeTotal / 15;
-    let completedJEEHours = jeeDone / 15;
-    let totalNEETHours = neetTotal * 2;
-    let completedNEETHours = neetDone * 2;
-
-    let totalPreparationHours = totalLectureHours + totalRevisionHours + totalJEEHours + totalNEETHours;
-    let completedPreparationHours = completedLectureHours + completedRevisionHours + completedJEEHours + completedNEETHours;
+    let totalPreparationHours = (lectureTotal * 2) + (revisionTotal * (35/60)) + (jeeTotal / 15) + (neetTotal * 2);
+    let completedPreparationHours = (lectureDone * 2) + (revisionDone * (35/60)) + (jeeDone / 15) + (neetDone * 2);
     let totalPrepPercentage = (completedPreparationHours / totalPreparationHours) * 100;
     let remainingPreparationHours = totalPreparationHours - completedPreparationHours;
 
@@ -359,40 +243,20 @@ function renderNetDashboard(){
         ["🟢 NEET PYQs", percentage(neetDone, neetTotal), `${neetDone}/${neetTotal} chapters`]
     ];
 
-    let remainingLectures = lectureTotal - lectureDone;
-    let remainingRevision = revisionTotal - revisionDone;
-    let remainingJEE = jeeTotal - jeeDone;
-    let remainingNEET = neetTotal - neetDone;
-
-    let timeStats = [
-        ["🎥 Lecture", (remainingLectures * 2).toFixed(1)+" h"],
-        ["🔄 Revision", (remainingRevision * (35/60)).toFixed(1)+" h"],
-        ["🟣 JEE PYQs", (remainingJEE / 15).toFixed(1)+" h"],
-        ["🟢 NEET PYQs", (remainingNEET * 2).toFixed(1)+" h"],
-        ["🔥 TOTAL", ((remainingLectures * 2) + (remainingRevision * (35/60)) + (remainingJEE / 15) + (remainingNEET * 2)).toFixed(1)+" h"],
-        ["Lectures left", remainingLectures],
-        ["JEE questions left", formatNumber(remainingJEE)],
-        ["NEET chapters left", remainingNEET]
-    ];
-
     let tableRows = chapters.map((chapter, index)=>{
         let d = data[index];
-        let complete = d.lec === chapter[1] && d.rev === chapter[2] && d.jee === chapter[3] && d.neet;
-        let started = d.lec > 0 || d.rev > 0 || d.jee > 0 || d.neet;
-        let status = complete ? 
-            `<span class="px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400">Complete</span>` :
-            started ? `<span class="px-2 py-1 rounded-full bg-amber-500/20 text-amber-400">In Progress</span>` :
-            `<span class="px-2 py-1 rounded-full bg-slate-800 text-slate-500">Not Started</span>`;
-
         return `
-        <tr class="hover:bg-slate-800/40 transition-colors">
+        <tr class="hover:bg-slate-800/45 transition-colors">
             <td class="p-3 text-center text-slate-500">${index+1}</td>
             <td class="p-3 font-medium">${chapter[0]}</td>
-            <td class="p-3 text-center whitespace-nowrap">${numberInput(index, "lec", d.lec, chapter[1])} <span class="text-slate-500">/ ${chapter[1]}</span><div class="text-xs text-slate-500 mt-1">${percentage(d.lec, chapter[1]).toFixed(0)}%</div></td>
-            <td class="p-3 text-center whitespace-nowrap">${numberInput(index, "rev", d.rev, chapter[2])} <span class="text-slate-500">/ ${chapter[2]}</span><div class="text-xs text-slate-500 mt-1">${percentage(d.rev, chapter[2]).toFixed(0)}%</div></td>
-            <td class="p-3 text-center whitespace-nowrap">${numberInput(index, "jee", d.jee, chapter[3])} <span class="text-slate-500">/ ${chapter[3]}</span><div class="text-xs text-slate-500 mt-1">${percentage(d.jee, chapter[3]).toFixed(0)}%</div></td>
-            <td class="p-3 text-center"><button onclick="toggleNeet(${index})" class="px-3 py-1 rounded-lg font-semibold ${d.neet ? "bg-emerald-500/20 text-emerald-400" : "bg-slate-800 text-slate-400"}">${d.neet ? "✓ Done" : "Pending"}</button></td>
-            <td class="p-3 text-center text-xs">${status}</td>
+            <td class="p-3 text-center"><span class="text-white">${d.lec}</span> <span class="text-slate-500">/ ${chapter[1]}</span></td>
+            <td class="p-3 text-center"><span class="text-white">${d.rev}</span> <span class="text-slate-500">/ ${chapter[2]}</span></td>
+            <td class="p-3 text-center"><span class="text-white">${formatNumber(d.jee)}</span> <span class="text-slate-500">/ ${chapter[3]}</span></td>
+            <td class="p-3 text-center">
+                <span class="px-3 py-1 rounded-lg font-semibold text-xs ${d.neet ? "bg-emerald-500/20 text-emerald-400" : "bg-slate-800 text-slate-400"}">
+                    ${d.neet ? "✓ Done" : "Pending"}
+                </span>
+            </td>
         </tr>`;
     }).join("");
 
@@ -426,35 +290,11 @@ function renderNetDashboard(){
         </div>`).join("")}
     </div>
 
-    <div class="grid lg:grid-cols-2 gap-4">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-            <h2 class="font-bold text-lg mb-4 text-emerald-400">📈 Progress</h2>
-            <div class="space-y-4">
-                ${metrics.map(m => `
-                <div>
-                    <div class="flex justify-between text-sm"><span>${m[0]}</span><b>${m[1].toFixed(1)}%</b></div>
-                    <div class="h-2 bg-slate-800 rounded-full mt-1 overflow-hidden">
-                        <div class="h-full bg-sky-400" style="width:${Math.min(100, m[1])}%"></div>
-                    </div>
-                </div>`).join("")}
-            </div>
-        </div>
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-            <h2 class="font-bold text-lg mb-4 text-emerald-400">⏱️ Remaining Work</h2>
-            <div class="grid grid-cols-2 gap-3">
-                ${timeStats.map(s => `
-                <div class="bg-slate-950 rounded-xl p-3">
-                    <span class="text-xs text-slate-500">${s[0]}</span>
-                    <div class="font-bold text-lg">${s[1]}</div>
-                </div>`).join("")}
-            </div>
-        </div>
-    </div>
-
+    <!-- Master Chapter Tracker Table -->
     <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
         <div class="p-5 border-b border-slate-800">
-            <h2 class="text-lg font-bold text-emerald-400">📚 Chapter Tracker</h2>
-            <p class="text-xs text-slate-500 mt-1">Past days are permanently locked at 3:00 AM. You can only increase today's progress.</p>
+            <h2 class="font-bold text-lg text-emerald-400">📚 Master Chapter Progress (Net Dashboard)</h2>
+            <p class="text-xs text-slate-500 mt-0.5">Reflects cumulative progress synced past the 3:00 AM cutoff.</p>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse text-sm">
@@ -466,7 +306,6 @@ function renderNetDashboard(){
                         <th class="p-3 text-center">Revision</th>
                         <th class="p-3 text-center">JEE PYQs</th>
                         <th class="p-3 text-center">NEET PYQs</th>
-                        <th class="p-3 text-center">Status</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-800/60">${tableRows}</tbody>
@@ -475,11 +314,7 @@ function renderNetDashboard(){
     </div>`;
 }
 
-
-/* =========================================================
-   2. DAILY CALENDAR VIEW
-========================================================= */
-
+// DAILY DASHBOARD VIEW WITH CHAPTER SELECTOR
 function changeMonth(direction){
     calendarDate.setMonth(calendarDate.getMonth() + direction);
     render();
@@ -494,7 +329,6 @@ function renderDailyDashboard(){
     const totals = getMasterTotals();
     const year = calendarDate.getFullYear();
     const month = calendarDate.getMonth();
-
     const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -502,7 +336,6 @@ function renderDailyDashboard(){
     const totalDays = new Date(year, month + 1, 0).getDate();
 
     let calendarCells = "";
-
     for(let i = 0; i < firstDayIndex; i++){
         calendarCells += `<div class="bg-slate-950/40 rounded-xl p-2 min-h-[85px] opacity-30"></div>`;
     }
@@ -512,25 +345,19 @@ function renderDailyDashboard(){
         const dStr = String(day).padStart(2, '0');
         const dateStr = `${year}-${mStr}-${dStr}`;
 
-        const log = dailyLogs[dateStr];
+        const dayLogs = dailyLogs[dateStr] || {};
         const isSelected = (dateStr === selectedCalendarDate);
         const isToday = (dateStr === getTodayKey());
 
-        let hasActivity = false;
         let dayHours = 0;
-        let dayPercentage = 0;
+        Object.keys(dayLogs).forEach(chIdx => {
+            let l = dayLogs[chIdx];
+            dayHours += ((l.lec || 0) * 2) + ((l.rev || 0) * (35/60)) + ((l.jee || 0) / 15) + (l.neet ? 2 : 0);
+        });
 
-        if(log){
-            dayHours = (log.lec * 2) + (log.rev * (35/60)) + (log.jee / 15) + (log.neet * 2);
-            if(dayHours > 0){
-                hasActivity = true;
-                dayPercentage = (dayHours / totals.totalPrepHours) * 100;
-            }
-        }
-
-        let borderClass = "border-slate-800";
-        if(isSelected) borderClass = "border-emerald-400 ring-2 ring-emerald-400/40";
-        else if(isToday) borderClass = "border-sky-500/50";
+        let dayPercentage = (dayHours / totals.totalPrepHours) * 100;
+        let hasActivity = dayHours > 0;
+        let borderClass = isSelected ? "border-emerald-400 ring-2 ring-emerald-400/40" : (isToday ? "border-sky-500/50" : "border-slate-800");
 
         calendarCells += `
         <div onclick="selectDay('${dateStr}')" 
@@ -540,171 +367,153 @@ function renderDailyDashboard(){
                 ${hasActivity ? `<span class="w-2 h-2 rounded-full bg-emerald-400"></span>` : ``}
             </div>
             <div>
-                ${hasActivity ? `
-                <div class="text-[11px] text-emerald-400 font-black truncate">+${dayPercentage.toFixed(2)}%</div>
-                <div class="text-[9px] text-slate-400 truncate">${dayHours.toFixed(1)} hrs</div>
-                ` : `
-                <div class="text-[10px] text-slate-600">-</div>
-                `}
+                ${hasActivity ? `<div class="text-[11px] text-emerald-400 font-black truncate">+${dayPercentage.toFixed(2)}%</div><div class="text-[9px] text-slate-400 truncate">${dayHours.toFixed(1)} hrs</div>` : `<div class="text-[10px] text-slate-600">-</div>`}
             </div>
         </div>`;
     }
 
-    const selectedLog = dailyLogs[selectedCalendarDate] || { lec: 0, rev: 0, jee: 0, neet: 0 };
-    const selLecPct = (selectedLog.lec / totals.lectureTotal) * 100;
-    const selRevPct = (selectedLog.rev / totals.revisionTotal) * 100;
-    const selJeePct = (selectedLog.jee / totals.jeeTotal) * 100;
-    const selNeetPct = (selectedLog.neet / totals.neetTotal) * 100;
-    const selHours = (selectedLog.lec * 2) + (selectedLog.rev * (35/60)) + (selectedLog.jee / 15) + (selectedLog.neet * 2);
-    const selTotalPct = (selHours / totals.totalPrepHours) * 100;
+    let activeDayLogs = dailyLogs[selectedCalendarDate] || {};
+    let todayKey = getTodayKey(new Date());
+    let isLocked = selectedCalendarDate < todayKey;
+
+    let chapterOptions = chapters.map((c, idx) => `<option value="${idx}">${idx + 1}. ${c[0]}</option>`).join("");
+
+    let loggedEntriesList = Object.keys(activeDayLogs).map(chIdx => {
+        let idx = Number(chIdx);
+        let log = activeDayLogs[idx];
+        let chapName = chapters[idx][0];
+        return `
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h3 class="font-bold text-white text-base">${idx + 1}. ${chapName}</h3>
+                <div class="flex flex-wrap gap-3 text-xs text-slate-400 mt-2">
+                    <span class="bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">🎥 Lectures: <strong class="text-white">${log.lec || 0}</strong></span>
+                    <span class="bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">🔄 Revision: <strong class="text-white">${log.rev || 0}</strong></span>
+                    <span class="bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">🟣 JEE PYQs: <strong class="text-white">${formatNumber(log.jee || 0)}</strong></span>
+                    <span class="bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">🟢 NEET PYQ: <strong class="${log.neet ? 'text-emerald-400' : 'text-slate-400'}">${log.neet ? 'Done' : 'Pending'}</strong></span>
+                </div>
+            </div>
+            ${!isLocked ? `
+            <button onclick="removeChapterLog(${idx})" class="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-all">Remove</button>
+            ` : ''}
+        </div>`;
+    }).join("");
 
     return `
     <div class="space-y-6">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
-                <h2 class="text-lg font-bold text-emerald-400">📅 Daily Calendar Tracker</h2>
-                <p class="text-xs text-slate-500 mt-0.5">Click any day on the calendar to inspect your exact daily output.</p>
+                <h2 class="text-lg font-bold text-emerald-400">📅 Daily Dashboard & Input Hub</h2>
+                <p class="text-xs text-slate-500 mt-0.5">Select a date, pick a chapter you studied, and log your progress.</p>
             </div>
             <div class="flex items-center gap-3 bg-slate-950 px-4 py-2 rounded-xl border border-slate-800">
-                <button onclick="changeMonth(-1)" class="text-emerald-400 hover:text-emerald-300 font-bold px-2 py-1">&larr; Prev</button>
+                <button onclick="changeMonth(-1)" class="text-emerald-400 font-bold px-2">&larr;</button>
                 <span class="font-bold text-sm min-w-[120px] text-center">${monthNames[month]} ${year}</span>
-                <button onclick="changeMonth(1)" class="text-emerald-400 hover:text-emerald-300 font-bold px-2 py-1">Next &rarr;</button>
+                <button onclick="changeMonth(1)" class="text-emerald-400 font-bold px-2">&rarr;</button>
             </div>
         </div>
 
-        <!-- Calendar Grid -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-6 shadow-xl space-y-4">
-            <div class="grid grid-cols-7 gap-2 text-center">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-6 shadow-xl">
+            <div class="grid grid-cols-7 gap-2 text-center mb-3">
                 ${daysOfWeek.map(d => `<div class="text-xs font-bold text-slate-500 uppercase">${d}</div>`).join("")}
             </div>
-            <div class="grid grid-cols-7 gap-2">
-                ${calendarCells}
-            </div>
+            <div class="grid grid-cols-7 gap-2">${calendarCells}</div>
         </div>
 
-        <!-- Selected Day Details Card -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 md:p-6 shadow-xl space-y-4">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-800 pb-3 gap-2">
+        <!-- Add Chapter Progress Form for Selected Date -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 md:p-6 shadow-xl space-y-5">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-4">
                 <div>
-                    <span class="text-xs uppercase text-slate-500 font-bold tracking-wider">Selected Date Inspection</span>
-                    <h3 class="text-xl font-bold text-emerald-400 mt-0.5">${selectedCalendarDate}</h3>
+                    <h2 class="font-bold text-lg text-emerald-400">✍️ Log Work for Date: ${selectedCalendarDate}</h2>
+                    <p class="text-xs text-slate-500 mt-0.5">${isLocked ? '🔒 This day is locked past 3:00 AM.' : 'Select a chapter below and add your progress for today.'}</p>
                 </div>
-                <span class="text-xs font-semibold px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-full">
-                    +${selTotalPct.toFixed(2)}% Total Syllabus Done
-                </span>
             </div>
 
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
-                <div class="bg-slate-950 p-4 rounded-xl space-y-1 border border-slate-800/80">
-                    <div class="text-xs text-slate-500">Lectures Done</div>
-                    <div class="text-2xl font-bold text-white">+${selectedLog.lec}</div>
-                    <div class="text-xs text-emerald-400 font-medium">${selLecPct.toFixed(2)}% of total lectures</div>
+            ${!isLocked ? `
+            <form onsubmit="saveChapterLogForActiveDate(event)" class="space-y-4 bg-slate-950 p-5 rounded-xl border border-slate-800">
+                <div>
+                    <label class="block text-xs uppercase font-bold text-slate-400 mb-2">Select Chapter</label>
+                    <select id="select-chapter" class="w-full bg-slate-900 border border-slate-700 focus:border-emerald-400 rounded-xl px-3 py-2 text-sm text-white">
+                        <option value="">-- Choose a chapter worked on today --</option>
+                        ${chapterOptions}
+                    </select>
                 </div>
 
-                <div class="bg-slate-950 p-4 rounded-xl space-y-1 border border-slate-800/80">
-                    <div class="text-xs text-slate-500">Revisions Done</div>
-                    <div class="text-2xl font-bold text-white">+${selectedLog.rev}</div>
-                    <div class="text-xs text-emerald-400 font-medium">${selRevPct.toFixed(2)}% of total revisions</div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs uppercase font-bold text-slate-400 mb-1">Lectures Today</label>
+                        <input type="number" id="input-lec" min="0" value="0" class="w-full bg-slate-900 border border-slate-700 focus:border-emerald-400 rounded-xl px-3 py-2 text-sm text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase font-bold text-slate-400 mb-1">Revision Today</label>
+                        <input type="number" id="input-rev" min="0" value="0" class="w-full bg-slate-900 border border-slate-700 focus:border-emerald-400 rounded-xl px-3 py-2 text-sm text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs uppercase font-bold text-slate-400 mb-1">JEE PYQs Today</label>
+                        <input type="number" id="input-jee" min="0" value="0" class="w-full bg-slate-900 border border-slate-700 focus:border-emerald-400 rounded-xl px-3 py-2 text-sm text-white">
+                    </div>
                 </div>
 
-                <div class="bg-slate-950 p-4 rounded-xl space-y-1 border border-slate-800/80">
-                    <div class="text-xs text-slate-500">JEE PYQs Solved</div>
-                    <div class="text-2xl font-bold text-white">+${formatNumber(selectedLog.jee)}</div>
-                    <div class="text-xs text-emerald-400 font-medium">${selJeePct.toFixed(2)}% of total JEE PYQs</div>
+                <div class="flex items-center justify-between pt-2">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="input-neet" class="w-4 h-4 rounded accent-emerald-500">
+                        <span class="text-sm font-semibold text-slate-300">NEET PYQ Chapter Completed</span>
+                    </label>
+                    <button type="submit" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-5 py-2 rounded-xl text-sm transition-all">Save Chapter Log</button>
                 </div>
+            </form>
+            ` : ``}
 
-                <div class="bg-slate-950 p-4 rounded-xl space-y-1 border border-slate-800/80">
-                    <div class="text-xs text-slate-500">NEET Chapters Done</div>
-                    <div class="text-2xl font-bold text-white">+${selectedLog.neet}</div>
-                    <div class="text-xs text-emerald-400 font-medium">${selNeetPct.toFixed(2)}% of total NEET chapters</div>
-                </div>
+            <div class="space-y-3 pt-2">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400">Chapters Logged on ${selectedCalendarDate}</h3>
+                ${loggedEntriesList ? `<div class="space-y-3">${loggedEntriesList}</div>` : `<div class="text-slate-500 text-sm italic bg-slate-950 p-4 rounded-xl border border-slate-800">No chapters logged for this date yet. Select a chapter above to add entries.</div>`}
             </div>
         </div>
     </div>`;
 }
 
-
-/* =========================================================
-   3. MONTHLY VIEW
-========================================================= */
-
+// MONTHLY SUMMARY VIEW
 function renderMonthlyDashboard(){
     const monthlyMap = {};
     const totals = getMasterTotals();
 
     Object.keys(dailyLogs).forEach(dateStr => {
         const monthKey = dateStr.substring(0, 7);
-        if(!monthlyMap[monthKey]){
-            monthlyMap[monthKey] = { lec: 0, rev: 0, jee: 0, neet: 0 };
-        }
-        monthlyMap[monthKey].lec += dailyLogs[dateStr].lec;
-        monthlyMap[monthKey].rev += dailyLogs[dateStr].rev;
-        monthlyMap[monthKey].jee += dailyLogs[dateStr].jee;
-        monthlyMap[monthKey].neet += dailyLogs[dateStr].neet;
+        if(!monthlyMap[monthKey]) monthlyMap[monthKey] = { lec: 0, rev: 0, jee: 0, neet: 0 };
+        const dayLogs = dailyLogs[dateStr];
+        Object.keys(dayLogs).forEach(chIdx => {
+            let l = dayLogs[chIdx];
+            monthlyMap[monthKey].lec += l.lec || 0;
+            monthlyMap[monthKey].rev += l.rev || 0;
+            monthlyMap[monthKey].jee += l.jee || 0;
+            if(l.neet) monthlyMap[monthKey].neet += 1;
+        });
     });
 
     const months = Object.keys(monthlyMap).sort().reverse();
-
     if(months.length === 0){
-        return `
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center space-y-3">
-            <div class="text-4xl">🗓️</div>
-            <h2 class="text-xl font-bold text-emerald-400">No Monthly Activity Logged Yet</h2>
-            <p class="text-slate-400 text-sm">Your monthly totals and percentage contributions will automatically accumulate here.</p>
-        </div>`;
+        return `<div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center"><h2 class="text-xl font-bold text-emerald-400">No Monthly Activity Logged Yet</h2></div>`;
     }
 
     return `
     <div class="space-y-4">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-            <h2 class="text-lg font-bold text-emerald-400 mb-1">🗓️ Monthly Summary</h2>
-            <p class="text-xs text-slate-500">Aggregated preparation output and percentage shares grouped by month.</p>
-        </div>
-
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5"><h2 class="text-lg font-bold text-emerald-400">🗓️ Monthly Summary</h2></div>
         <div class="grid md:grid-cols-2 gap-4">
             ${months.map(m => {
                 const stat = monthlyMap[m];
-                const lecPct = (stat.lec / totals.lectureTotal) * 100;
-                const revPct = (stat.rev / totals.revisionTotal) * 100;
-                const jeePct = (stat.jee / totals.jeeTotal) * 100;
-                const neetPct = (stat.neet / totals.neetTotal) * 100;
-
                 const monthHours = (stat.lec * 2) + (stat.rev * (35/60)) + (stat.jee / 15) + (stat.neet * 2);
                 const monthTotalPct = (monthHours / totals.totalPrepHours) * 100;
-
                 return `
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
                     <div class="flex justify-between items-center border-b border-slate-800 pb-2">
                         <span class="font-bold text-emerald-400 text-lg">${m}</span>
-                        <span class="text-xs font-semibold px-2.5 py-1 bg-emerald-500/20 text-emerald-400 rounded-full">
-                            +${monthTotalPct.toFixed(2)}% Overall Progress
-                        </span>
+                        <span class="text-xs font-semibold px-2.5 py-1 bg-emerald-500/20 text-emerald-400 rounded-full">+${monthTotalPct.toFixed(2)}%</span>
                     </div>
-
                     <div class="grid grid-cols-2 gap-3 text-sm">
-                        <div class="bg-slate-950 p-3 rounded-xl space-y-1">
-                            <div class="text-xs text-slate-500">Lectures Completed</div>
-                            <div class="text-lg font-bold text-white">${stat.lec}</div>
-                            <div class="text-xs text-emerald-400 font-medium">${lecPct.toFixed(2)}% of total</div>
-                        </div>
-
-                        <div class="bg-slate-950 p-3 rounded-xl space-y-1">
-                            <div class="text-xs text-slate-500">Revisions Completed</div>
-                            <div class="text-lg font-bold text-white">${stat.rev}</div>
-                            <div class="text-xs text-emerald-400 font-medium">${revPct.toFixed(2)}% of total</div>
-                        </div>
-
-                        <div class="bg-slate-950 p-3 rounded-xl space-y-1">
-                            <div class="text-xs text-slate-500">JEE PYQs Solved</div>
-                            <div class="text-lg font-bold text-white">${formatNumber(stat.jee)}</div>
-                            <div class="text-xs text-emerald-400 font-medium">${jeePct.toFixed(2)}% of total</div>
-                        </div>
-
-                        <div class="bg-slate-950 p-3 rounded-xl space-y-1">
-                            <div class="text-xs text-slate-500">NEET Chapters Completed</div>
-                            <div class="text-lg font-bold text-white">${stat.neet}</div>
-                            <div class="text-xs text-emerald-400 font-medium">${neetPct.toFixed(2)}% of total</div>
-                        </div>
+                        <div class="bg-slate-950 p-3 rounded-xl"><div class="text-xs text-slate-500">Lectures</div><div class="text-lg font-bold">${stat.lec}</div></div>
+                        <div class="bg-slate-950 p-3 rounded-xl"><div class="text-xs text-slate-500">Revisions</div><div class="text-lg font-bold">${stat.rev}</div></div>
+                        <div class="bg-slate-950 p-3 rounded-xl"><div class="text-xs text-slate-500">JEE PYQs</div><div class="text-lg font-bold">${formatNumber(stat.jee)}</div></div>
+                        <div class="bg-slate-950 p-3 rounded-xl"><div class="text-xs text-slate-500">NEET Chapters</div><div class="text-lg font-bold">${stat.neet}</div></div>
                     </div>
                 </div>`;
             }).join("")}
@@ -712,44 +521,23 @@ function renderMonthlyDashboard(){
     </div>`;
 }
 
-
-/* =========================================================
-   RESET & EXPORT
-========================================================= */
-
 function resetData(){
-    if(!confirm("Reset the dashboard and logs to your original starting progress?")){
-        return;
-    }
-    data = chapters.map(chapter => ({
-        lec: chapter[4],
-        rev: chapter[5],
-        jee: chapter[6],
-        neet: chapter[7]
-    }));
+    if(!confirm("Reset all daily logs?")) return;
     dailyLogs = {};
-    dailySnapshots = {};
     saveData();
     render();
 }
 
 function exportData(){
-    const exportBundle = { data, dailyLogs, dailySnapshots };
-    const file = new Blob([JSON.stringify(exportBundle, null, 2)], { type: "application/json" });
+    const file = new Blob([JSON.stringify(dailyLogs, null, 2)], { type: "application/json" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(file);
-    link.download = "NEET-Physics-Progress-Backup.json";
+    link.download = "NEET-Physics-DailyLogs-Backup.json";
     link.click();
 }
 
-
-/* =========================================================
-   START DASHBOARD
-========================================================= */
-
 render();
-
 </script>
-
 </body>
 </html>
+  
