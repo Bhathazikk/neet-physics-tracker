@@ -162,7 +162,6 @@ function saveData(){
 // Custom date key function: shifts day boundary to 3:00 AM
 function getTodayKey(){
     const d = new Date();
-    // If it's between 12:00 AM and 2:59 AM, count it toward the *previous* calendar day
     if(d.getHours() < 3){
         d.setDate(d.getDate() - 1);
     }
@@ -172,6 +171,7 @@ function getTodayKey(){
 function checkDailySnapshot(){
     const today = getTodayKey();
     if(!dailySnapshots[today]){
+        // If a new day starts, the baseline minimum for today is whatever total progress we had up to this point
         dailySnapshots[today] = JSON.parse(JSON.stringify(data));
     }
 }
@@ -238,12 +238,14 @@ function switchView(view){
 
 
 /* =========================================================
-   UPDATE NUMBERS (LOCKED BEFORE 3 AM CUTOFF)
+   UPDATE NUMBERS (PERMANENTLY LOCKED FLOOR)
 ========================================================= */
 
 function updateValue(index, type, value){
     checkDailySnapshot();
     const today = getTodayKey();
+    
+    // Find the absolute lowest allowed value (the baseline from the start of today, which includes all past days)
     let baseline = dailySnapshots[today][index][type];
     let max;
 
@@ -254,7 +256,7 @@ function updateValue(index, type, value){
     let newValue = clamp(value, 0, max);
 
     if(newValue < baseline){
-        alert(`🔒 Locked! You cannot reduce progress completed before today's 3:00 AM cutoff.`);
+        alert(`🔒 Locked! You cannot reduce or edit progress completed before today's 3:00 AM cutoff.`);
         render();
         return;
     }
@@ -452,7 +454,7 @@ function renderNetDashboard(){
     <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
         <div class="p-5 border-b border-slate-800">
             <h2 class="text-lg font-bold text-emerald-400">📚 Chapter Tracker</h2>
-            <p class="text-xs text-slate-500 mt-1">Past days are locked automatically at 3:00 AM. You can freely edit today's progress.</p>
+            <p class="text-xs text-slate-500 mt-1">Past days are permanently locked at 3:00 AM. You can only increase today's progress.</p>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse text-sm">
