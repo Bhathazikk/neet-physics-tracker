@@ -133,11 +133,12 @@ let currentView = "net";
 
 let savedData = localStorage.getItem("neetPhysicsMasterDashboard");
 let savedLogs = localStorage.getItem("neetPhysicsMasterLogs");
+let savedDailySnapshots = localStorage.getItem("neetPhysicsDailySnapshots");
 
 let data;
 let dailyLogs = savedLogs ? JSON.parse(savedLogs) : {};
+let dailySnapshots = savedDailySnapshots ? JSON.parse(savedDailySnapshots) : {};
 
-// Calendar navigation state
 let calendarDate = new Date();
 let selectedCalendarDate = getTodayKey();
 
@@ -155,12 +156,26 @@ if(savedData){
 function saveData(){
     localStorage.setItem("neetPhysicsMasterDashboard", JSON.stringify(data));
     localStorage.setItem("neetPhysicsMasterLogs", JSON.stringify(dailyLogs));
+    localStorage.setItem("neetPhysicsDailySnapshots", JSON.stringify(dailySnapshots));
 }
 
+// Custom date key function: shifts day boundary to 3:00 AM
 function getTodayKey(){
     const d = new Date();
+    // If it's between 12:00 AM and 2:59 AM, count it toward the *previous* calendar day
+    if(d.getHours() < 3){
+        d.setDate(d.getDate() - 1);
+    }
     return d.toISOString().split('T')[0];
 }
+
+function checkDailySnapshot(){
+    const today = getTodayKey();
+    if(!dailySnapshots[today]){
+        dailySnapshots[today] = JSON.parse(JSON.stringify(data));
+    }
+}
+checkDailySnapshot();
 
 function logActivity(type, delta){
     if(delta === 0) return;
@@ -223,17 +238,28 @@ function switchView(view){
 
 
 /* =========================================================
-   UPDATE NUMBERS & AUTOMATIC LOGGING
+   UPDATE NUMBERS (LOCKED BEFORE 3 AM CUTOFF)
 ========================================================= */
 
 function updateValue(index, type, value){
+    checkDailySnapshot();
+    const today = getTodayKey();
+    let baseline = dailySnapshots[today][index][type];
     let max;
+
     if(type === "lec") max = chapters[index][1];
     else if(type === "rev") max = chapters[index][2];
     else if(type === "jee") max = chapters[index][3];
 
+    let newValue = clamp(value, 0, max);
+
+    if(newValue < baseline){
+        alert(`🔒 Locked! You cannot reduce progress completed before today's 3:00 AM cutoff.`);
+        render();
+        return;
+    }
+
     const oldValue = data[index][type];
-    const newValue = clamp(value, 0, max);
     const delta = newValue - oldValue;
 
     data[index][type] = newValue;
@@ -244,8 +270,17 @@ function updateValue(index, type, value){
 }
 
 function toggleNeet(index){
-    const oldStatus = data[index].neet;
-    const newStatus = !oldStatus;
+    checkDailySnapshot();
+    const today = getTodayKey();
+    const baselineNeet = dailySnapshots[today][index].neet;
+    const currentNeet = data[index].neet;
+
+    if(baselineNeet && !currentNeet){
+        alert(`🔒 Locked! This NEET chapter was completed before today's 3:00 AM cutoff and cannot be undone.`);
+        return;
+    }
+
+    const newStatus = !currentNeet;
     data[index].neet = newStatus;
 
     const delta = newStatus ? 1 : -1;
@@ -417,7 +452,7 @@ function renderNetDashboard(){
     <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
         <div class="p-5 border-b border-slate-800">
             <h2 class="text-lg font-bold text-emerald-400">📚 Chapter Tracker</h2>
-            <p class="text-xs text-slate-500 mt-1">Change the numbers whenever you complete more work. Your progress is saved automatically.</p>
+            <p class="text-xs text-slate-500 mt-1">Past days are locked automatically at 3:00 AM. You can freely edit today's progress.</p>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse text-sm">
@@ -691,12 +726,13 @@ function resetData(){
         neet: chapter[7]
     }));
     dailyLogs = {};
+    dailySnapshots = {};
     saveData();
     render();
 }
 
 function exportData(){
-    const exportBundle = { data, dailyLogs };
+    const exportBundle = { data, dailyLogs, dailySnapshots };
     const file = new Blob([JSON.stringify(exportBundle, null, 2)], { type: "application/json" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(file);
