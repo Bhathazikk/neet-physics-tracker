@@ -5,539 +5,840 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NEET Physics Master Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <style>
-    input[type=number] { -moz-appearance: textfield; }
-    input[type=number]::-webkit-inner-spin-button,
-    input[type=number]::-webkit-outer-spin-button { opacity: 1; }
+input[type=number]{-moz-appearance:textfield}
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button{opacity:1}
+button:disabled{opacity:.5;cursor:not-allowed}
 </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen p-3 md:p-8">
 
-<div class="max-w-7xl mx-auto space-y-6">
+<div id="auth-screen" class="max-w-md mx-auto mt-8 md:mt-16 bg-slate-900 border border-slate-800 rounded-2xl p-6 md:p-8 shadow-xl">
+  <div class="text-center mb-6">
+    <div class="text-4xl mb-3">⚡</div>
+    <h1 class="text-2xl font-black text-emerald-400">NEET Physics Dashboard</h1>
+    <p class="text-sm text-slate-400 mt-2">Sign in to access your personal, cloud-saved progress.</p>
+  </div>
 
-<!-- HEADER & TABS -->
-<header class="bg-slate-900 border border-slate-800 rounded-2xl p-5 md:p-6 shadow-xl space-y-4">
+  <div class="flex gap-2 mb-5">
+    <button id="mode-login" onclick="setAuthMode('login')" class="flex-1 bg-emerald-500 text-slate-950 rounded-xl py-2 font-bold">Sign in</button>
+    <button id="mode-signup" onclick="setAuthMode('signup')" class="flex-1 bg-slate-800 text-slate-300 rounded-xl py-2 font-bold">Create account</button>
+  </div>
+
+  <form id="auth-form" onsubmit="submitAuth(event)" class="space-y-4">
+    <div id="name-wrap" class="hidden">
+      <label class="block text-xs text-slate-400 mb-1">Your name (optional)</label>
+      <input id="auth-name" type="text" autocomplete="name" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3" placeholder="Name">
+    </div>
+    <div>
+      <label class="block text-xs text-slate-400 mb-1">Email</label>
+      <input id="auth-email" type="email" autocomplete="email" required class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3" placeholder="you@example.com">
+    </div>
+    <div>
+      <label class="block text-xs text-slate-400 mb-1">Password</label>
+      <input id="auth-password" type="password" minlength="6" autocomplete="current-password" required class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3" placeholder="At least 6 characters">
+    </div>
+    <button id="auth-submit" type="submit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl py-3 font-black">Sign in</button>
+  </form>
+
+  <button onclick="signInGoogle()" class="w-full mt-3 bg-slate-800 hover:bg-slate-700 rounded-xl py-3 font-bold">Continue with Google</button>
+  <button id="forgot-btn" onclick="resetPassword()" class="w-full mt-3 text-sm text-sky-400 hover:text-sky-300">Forgot password?</button>
+  <p id="auth-message" role="status" class="text-sm mt-4 text-center text-amber-300"></p>
+  <p class="text-xs text-slate-500 mt-5 text-center">Each account has its own private progress. Use your own account on every device.</p>
+</div>
+
+<div id="app" class="hidden max-w-7xl mx-auto space-y-6">
+  <header class="bg-slate-900 border border-slate-800 rounded-2xl p-5 md:p-6 shadow-xl space-y-4">
     <div class="flex flex-col lg:flex-row justify-between gap-5 items-start lg:items-center">
-        <div>
-            <h1 class="text-2xl md:text-3xl font-bold text-emerald-400">⚡ NEET Physics Master Dashboard</h1>
-            <p class="text-slate-400 text-sm mt-1">Lecture: 2h • Revision: 35m/lecture • JEE PYQs: 15 Q/hr • NEET PYQs: ~2h/chapter</p>
-        </div>
-        <div class="flex gap-2 flex-wrap">
-            <button onclick="exportData()" class="bg-sky-500 hover:bg-sky-400 text-slate-950 px-4 py-2 rounded-xl font-bold text-sm">Export</button>
-            <button onclick="resetData()" class="bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 px-4 py-2 rounded-xl font-bold text-sm">Reset</button>
-        </div>
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold text-emerald-400">⚡ NEET Physics Master Dashboard</h1>
+        <p class="text-slate-400 text-sm mt-1">Lecture: 2h • Revision: 35m/lecture • JEE PYQs: 15 Q/hr • NEET PYQs: ~2h/chapter</p>
+        <p id="user-label" class="text-xs text-slate-500 mt-2"></p>
+      </div>
+      <div class="flex items-center gap-3">
+        <span id="sync-status" class="text-xs text-emerald-300">Connecting…</span>
+        <button onclick="signOutUser()" class="bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-xl font-bold text-sm">Sign out</button>
+      </div>
     </div>
-    <div class="flex gap-2 border-t border-slate-800 pt-4">
-        <button onclick="switchView('net')" id="tab-net" class="px-4 py-2 rounded-xl font-bold text-sm transition-all bg-emerald-500 text-slate-950">📊 Net Dashboard</button>
-        <button onclick="switchView('daily')" id="tab-daily" class="px-4 py-2 rounded-xl font-bold text-sm transition-all bg-slate-800 text-slate-400 hover:text-white">📅 Daily Dashboard & Input</button>
-        <button onclick="switchView('monthly')" id="tab-monthly" class="px-4 py-2 rounded-xl font-bold text-sm transition-all bg-slate-800 text-slate-400 hover:text-white">🗓️ Monthly Summary</button>
+    <div class="flex flex-wrap gap-2 border-t border-slate-800 pt-4">
+      <button onclick="switchView('net')" id="tab-net" class="px-4 py-2 rounded-xl font-bold text-sm bg-emerald-500 text-slate-950">📊 Net Dashboard</button>
+      <button onclick="switchView('daily')" id="tab-daily" class="px-4 py-2 rounded-xl font-bold text-sm bg-slate-800 text-slate-400">📅 Daily Dashboard & Input</button>
+      <button onclick="switchView('monthly')" id="tab-monthly" class="px-4 py-2 rounded-xl font-bold text-sm bg-slate-800 text-slate-400">🗓️ Monthly Summary</button>
     </div>
-</header>
-
-<div id="view-container" class="space-y-6"></div>
-
+  </header>
+  <div id="view-container" class="space-y-6"></div>
 </div>
 
 <script>
+// Replace these placeholders with your Firebase Web App configuration.
+const firebaseConfig = {
+  apiKey: "PASTE_YOUR_FIREBASE_API_KEY_HERE",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_FIREBASE_APP_ID"
+};
+
+const FIREBASE_CONFIG_READY =
+  firebaseConfig.apiKey !== "PASTE_YOUR_FIREBASE_API_KEY_HERE" &&
+  firebaseConfig.projectId !== "YOUR_PROJECT_ID";
+
 const chapters = [
-    ["Units and Measurements",11,11,181],
-    ["Vectors & Mathematical Tools",21,21,42],
-    ["Motion in a Straight Line (1D)",12,12,90],
-    ["Motion in a Plane (2D)",11,11,87],
-    ["Laws of Motion",16,16,146],
-    ["Work, Energy and Power",9,9,103],
-    ["Center of Mass (COM)",8,8,76],
-    ["Rotational Motion",12,12,175],
-    ["Gravitation",7,7,158],
-    ["Mechanical Properties of Solids",4,4,71],
-    ["Mechanical Properties of Fluids",11,11,135],
-    ["Thermal Properties of Matter",9,9,71],
-    ["Thermodynamics",5,5,107],
-    ["Kinetic Theory of Gases (KTG)",3,3,111],
-    ["Oscillations",7,7,105],
-    ["Waves",6,6,77],
-    ["Electric Charges and Fields",12,12,129],
-    ["Electrostatic Potential and Capacitance",12,12,152],
-    ["Current Electricity",12,12,231],
-    ["Moving Charges and Magnetism",10,10,134],
-    ["Magnetism and Matter",3,3,39],
-    ["Electromagnetic Induction",4,4,112],
-    ["Alternating Current",7,7,134],
-    ["Electromagnetic Waves",2,2,114],
-    ["Ray Optics and Optical Instruments",13,13,194],
-    ["Wave Optics",5,5,102],
-    ["Dual Nature of Radiation and Matter",2,2,158],
-    ["Atoms",3,3,103],
-    ["Nuclei",2,2,57],
-    ["Semiconductor Electronics",5,5,140]
+  ["Units and Measurements",11,11,181],
+  ["Vectors & Mathematical Tools",21,21,42],
+  ["Motion in a Straight Line (1D)",12,12,90],
+  ["Motion in a Plane (2D)",11,11,87],
+  ["Laws of Motion",16,16,146],
+  ["Work, Energy and Power",9,9,103],
+  ["Center of Mass (COM)",8,8,76],
+  ["Rotational Motion",12,12,175],
+  ["Gravitation",7,7,158],
+  ["Mechanical Properties of Solids",4,4,71],
+  ["Mechanical Properties of Fluids",11,11,135],
+  ["Thermal Properties of Matter",9,9,71],
+  ["Thermodynamics",5,5,107],
+  ["Kinetic Theory of Gases (KTG)",3,3,111],
+  ["Oscillations",7,7,105],
+  ["Waves",6,6,77],
+  ["Electric Charges and Fields",12,12,129],
+  ["Electrostatic Potential and Capacitance",12,12,152],
+  ["Current Electricity",12,12,231],
+  ["Moving Charges and Magnetism",10,10,134],
+  ["Magnetism and Matter",3,3,39],
+  ["Electromagnetic Induction",4,4,112],
+  ["Alternating Current",7,7,134],
+  ["Electromagnetic Waves",2,2,114],
+  ["Ray Optics and Optical Instruments",13,13,194],
+  ["Wave Optics",5,5,102],
+  ["Dual Nature of Radiation and Matter",2,2,158],
+  ["Atoms",3,3,103],
+  ["Nuclei",2,2,57],
+  ["Semiconductor Electronics",5,5,140]
 ];
 
 let currentView = "net";
-let savedLogs = localStorage.getItem("neetPhysicsMasterDailyLogs");
-let dailyLogs = savedLogs ? JSON.parse(savedLogs) : {}; 
-
+let dailyLogs = {};
 let calendarDate = new Date();
 let selectedCalendarDate = getTodayKey();
+let currentUser = null;
+let db = null;
+let authMode = "login";
+let saving = false;
 
-function saveData(){
-    localStorage.setItem("neetPhysicsMasterDailyLogs", JSON.stringify(dailyLogs));
+function setSyncStatus(s, color = "text-emerald-300") {
+  const el = document.getElementById("sync-status");
+  if (el) {
+    el.className = "text-xs " + color;
+    el.textContent = s;
+  }
 }
 
-function getTodayKey(customDate = new Date()){
-    let d = new Date(customDate);
-    if(d.getHours() < 3){
-        d.setDate(d.getDate() - 1);
-    }
-    return d.toISOString().split('T')[0];
+function setAuthMessage(s) {
+  document.getElementById("auth-message").textContent = s;
 }
 
-function getActiveDateKey(){
-    return selectedCalendarDate;
+function setAuthMode(mode) {
+  authMode = mode;
+  const signup = mode === "signup";
+
+  document.getElementById("name-wrap").classList.toggle("hidden", !signup);
+  document.getElementById("auth-submit").textContent =
+    signup ? "Create account" : "Sign in";
+
+  document.getElementById("mode-login").className =
+    (!signup
+      ? "flex-1 bg-emerald-500 text-slate-950"
+      : "flex-1 bg-slate-800 text-slate-300") +
+    " rounded-xl py-2 font-bold";
+
+  document.getElementById("mode-signup").className =
+    (signup
+      ? "flex-1 bg-emerald-500 text-slate-950"
+      : "flex-1 bg-slate-800 text-slate-300") +
+    " rounded-xl py-2 font-bold";
+
+  document.getElementById("forgot-btn").classList.toggle("hidden", signup);
+  setAuthMessage("");
 }
 
-// Net data calculation incorporating 3 AM cutoff rule
-function getNetData(){
-    let todayKey = getTodayKey(new Date());
-    let netData = chapters.map(() => ({ lec: 0, rev: 0, jee: 0, neet: false }));
-
-    Object.keys(dailyLogs).forEach(dateStr => {
-        if(dateStr < todayKey){
-            const chapLogs = dailyLogs[dateStr];
-            Object.keys(chapLogs).forEach(chIdx => {
-                let idx = Number(chIdx);
-                netData[idx].lec += chapLogs[idx].lec || 0;
-                netData[idx].rev += chapLogs[idx].rev || 0;
-                netData[idx].jee += chapLogs[idx].jee || 0;
-                if(chapLogs[idx].neet) netData[idx].neet = true;
-            });
-        }
-    });
-    return netData;
+function firebaseReady() {
+  if (!FIREBASE_CONFIG_READY) {
+    setAuthMessage("Firebase is not configured yet. Add your Firebase Web App config in index.html first.");
+    return false;
+  }
+  return true;
 }
 
-function getMasterTotals(){
-    let lectureTotal = 0, revisionTotal = 0, jeeTotal = 0, neetTotal = chapters.length;
-    chapters.forEach(c => {
-        lectureTotal += c[1];
-        revisionTotal += c[2];
-        jeeTotal += c[3];
-    });
-    let totalPrepHours = (lectureTotal * 2) + (revisionTotal * (35/60)) + (jeeTotal / 15) + (neetTotal * 2);
-    return { lectureTotal, revisionTotal, jeeTotal, neetTotal, totalPrepHours };
-}
+async function submitAuth(e) {
+  e.preventDefault();
+  if (!firebaseReady()) return;
 
-function clamp(value, min, max){
-    value = Number(value);
-    if(isNaN(value)) value = 0;
-    return Math.max(min, Math.min(value, max));
-}
+  const email = document.getElementById("auth-email").value.trim();
+  const password = document.getElementById("auth-password").value;
+  const btn = document.getElementById("auth-submit");
 
-function percentage(done, total){
-    if(total === 0) return 0;
-    return (done/total)*100;
-}
+  btn.disabled = true;
+  setAuthMessage("Please wait…");
 
-function formatNumber(number){
-    return Number(number).toLocaleString("en-IN", { maximumFractionDigits: 1 });
-}
-
-function switchView(view){
-    currentView = view;
-    ['net', 'daily', 'monthly'].forEach(v => {
-        const btn = document.getElementById(`tab-${v}`);
-        if(v === view){
-            btn.className = "px-4 py-2 rounded-xl font-bold text-sm transition-all bg-emerald-500 text-slate-950";
-        } else {
-            btn.className = "px-4 py-2 rounded-xl font-bold text-sm transition-all bg-slate-800 text-slate-400 hover:text-white";
-        }
-    });
-    render();
-}
-
-function saveChapterLogForActiveDate(event){
-    event.preventDefault();
-    let targetDate = getActiveDateKey();
-    let todayKey = getTodayKey(new Date());
-
-    if(targetDate < todayKey){
-        alert("This day is already locked past the 3:00 AM cutoff and cannot be edited.");
-        return;
-    }
-
-    let chapterIndex = document.getElementById("select-chapter").value;
-    if(chapterIndex === "") {
-        alert("Please select a chapter.");
-        return;
-    }
-
-    let lec = clamp(document.getElementById("input-lec").value, 0, chapters[chapterIndex][1]);
-    let rev = clamp(document.getElementById("input-rev").value, 0, chapters[chapterIndex][2]);
-    let jee = clamp(document.getElementById("input-jee").value, 0, chapters[chapterIndex][3]);
-    let neet = document.getElementById("input-neet").checked;
-
-    if(!dailyLogs[targetDate]) dailyLogs[targetDate] = {};
-    
-    // If all are zero/false, remove entry, else save
-    if(lec === 0 && rev === 0 && jee === 0 && !neet){
-        delete dailyLogs[targetDate][chapterIndex];
-        if(Object.keys(dailyLogs[targetDate]).length === 0) delete dailyLogs[targetDate];
+  try {
+    if (authMode === "signup") {
+      const cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
+      const name = document.getElementById("auth-name").value.trim();
+      if (name) await cred.user.updateProfile({ displayName: name });
     } else {
-        dailyLogs[targetDate][chapterIndex] = { lec, rev, jee, neet };
+      await firebase.auth().signInWithEmailAndPassword(email, password);
     }
-
-    saveData();
-    render();
+    setAuthMessage("");
+  } catch (err) {
+    setAuthMessage(authError(err));
+  } finally {
+    btn.disabled = false;
+  }
 }
 
-function removeChapterLog(index){
-    let targetDate = getActiveDateKey();
-    let todayKey = getTodayKey(new Date());
-
-    if(targetDate < todayKey){
-        alert("This day is locked past the 3:00 AM cutoff.");
-        return;
-    }
-
-    if(dailyLogs[targetDate] && dailyLogs[targetDate][index]){
-        delete dailyLogs[targetDate][index];
-        if(Object.keys(dailyLogs[targetDate]).length === 0) delete dailyLogs[targetDate];
-        saveData();
-        render();
-    }
+async function signInGoogle() {
+  if (!firebaseReady()) return;
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    await firebase.auth().signInWithPopup(provider);
+  } catch (err) {
+    setAuthMessage(authError(err));
+  }
 }
 
-function render(){
-    const container = document.getElementById("view-container");
-    if(currentView === 'net') container.innerHTML = renderNetDashboard();
-    else if(currentView === 'daily') container.innerHTML = renderDailyDashboard();
-    else if(currentView === 'monthly') container.innerHTML = renderMonthlyDashboard();
+async function resetPassword() {
+  if (!firebaseReady()) return;
+
+  const email = document.getElementById("auth-email").value.trim();
+  if (!email) {
+    setAuthMessage("Enter your email first, then tap Forgot password.");
+    return;
+  }
+
+  try {
+    await firebase.auth().sendPasswordResetEmail(email);
+    setAuthMessage("Password reset email sent. Check your inbox.");
+  } catch (err) {
+    setAuthMessage(authError(err));
+  }
 }
 
-// NET DASHBOARD WITH CHAPTER TABLE
-function renderNetDashboard(){
-    let data = getNetData();
-    let lectureDone = 0, lectureTotal = 0;
-    let revisionDone = 0, revisionTotal = 0;
-    let jeeDone = 0, jeeTotal = 0;
-    let neetDone = 0, neetTotal = chapters.length;
+function authError(err) {
+  const map = {
+    "auth/email-already-in-use": "This email already has an account. Sign in instead.",
+    "auth/invalid-email": "Please enter a valid email address.",
+    "auth/weak-password": "Use a password with at least 6 characters.",
+    "auth/user-not-found": "No account found for this email. Create an account first.",
+    "auth/wrong-password": "Incorrect email or password.",
+    "auth/invalid-credential": "Incorrect email or password.",
+    "auth/popup-closed-by-user": "Google sign-in was cancelled.",
+    "auth/unauthorized-domain": "Add this website domain in Firebase Authentication → Settings → Authorized domains."
+  };
 
-    chapters.forEach((chapter, index)=>{
-        lectureDone += data[index].lec;
-        lectureTotal += chapter[1];
-        revisionDone += data[index].rev;
-        revisionTotal += chapter[2];
-        jeeDone += data[index].jee;
-        jeeTotal += chapter[3];
-        if(data[index].neet) neetDone++;
-    });
-
-    let totalPreparationHours = (lectureTotal * 2) + (revisionTotal * (35/60)) + (jeeTotal / 15) + (neetTotal * 2);
-    let completedPreparationHours = (lectureDone * 2) + (revisionDone * (35/60)) + (jeeDone / 15) + (neetDone * 2);
-    let totalPrepPercentage = (completedPreparationHours / totalPreparationHours) * 100;
-    let remainingPreparationHours = totalPreparationHours - completedPreparationHours;
-
-    const metrics = [
-        ["🎥 Lectures", percentage(lectureDone, lectureTotal), `${lectureDone}/${lectureTotal}`],
-        ["🔄 Revision", percentage(revisionDone, revisionTotal), `${revisionDone}/${revisionTotal}`],
-        ["🟣 JEE Main PYQs", percentage(jeeDone, jeeTotal), `${formatNumber(jeeDone)}/${formatNumber(jeeTotal)}`],
-        ["🟢 NEET PYQs", percentage(neetDone, neetTotal), `${neetDone}/${neetTotal} chapters`]
-    ];
-
-    let tableRows = chapters.map((chapter, index)=>{
-        let d = data[index];
-        return `
-        <tr class="hover:bg-slate-800/45 transition-colors">
-            <td class="p-3 text-center text-slate-500">${index+1}</td>
-            <td class="p-3 font-medium">${chapter[0]}</td>
-            <td class="p-3 text-center"><span class="text-white">${d.lec}</span> <span class="text-slate-500">/ ${chapter[1]}</span></td>
-            <td class="p-3 text-center"><span class="text-white">${d.rev}</span> <span class="text-slate-500">/ ${chapter[2]}</span></td>
-            <td class="p-3 text-center"><span class="text-white">${formatNumber(d.jee)}</span> <span class="text-slate-500">/ ${chapter[3]}</span></td>
-            <td class="p-3 text-center">
-                <span class="px-3 py-1 rounded-lg font-semibold text-xs ${d.neet ? "bg-emerald-500/20 text-emerald-400" : "bg-slate-800 text-slate-400"}">
-                    ${d.neet ? "✓ Done" : "Pending"}
-                </span>
-            </td>
-        </tr>`;
-    }).join("");
-
-    return `
-    <div class="bg-gradient-to-r from-emerald-500/20 via-slate-900 to-sky-500/20 border border-emerald-500/30 rounded-2xl p-5 md:p-7 shadow-xl">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
-            <div>
-                <div class="text-sm uppercase tracking-widest font-bold text-emerald-400">🔥 TOTAL PREPARATION</div>
-                <div class="text-5xl md:text-6xl font-black mt-2">${totalPrepPercentage.toFixed(1)}%</div>
-                <div class="text-slate-400 mt-2">${completedPreparationHours.toFixed(1)} hours completed / ${totalPreparationHours.toFixed(1)} hours total</div>
-            </div>
-            <div class="md:w-1/2">
-                <div class="flex justify-between text-sm mb-2"><span class="text-slate-400">Overall Progress</span><span class="font-bold text-emerald-400">${totalPrepPercentage.toFixed(1)}%</span></div>
-                <div class="h-5 bg-slate-800 rounded-full overflow-hidden">
-                    <div class="h-full bg-emerald-400 rounded-full transition-all duration-500" style="width:${Math.min(100, totalPrepPercentage)}%"></div>
-                </div>
-                <div class="text-xs text-slate-500 mt-2">${remainingPreparationHours.toFixed(1)} hours remaining</div>
-            </div>
-        </div>
-    </div>
-
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        ${metrics.map(m => `
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-            <div class="text-xs text-slate-400 uppercase font-bold">${m[0]}</div>
-            <div class="text-2xl font-black text-emerald-400 mt-1">${m[1].toFixed(1)}%</div>
-            <div class="text-xs text-slate-400 mt-1">${m[2]}</div>
-            <div class="h-2 bg-slate-800 rounded-full mt-3 overflow-hidden">
-                <div class="h-full bg-emerald-400" style="width:${Math.min(100, m[1])}%"></div>
-            </div>
-        </div>`).join("")}
-    </div>
-
-    <!-- Master Chapter Tracker Table -->
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
-        <div class="p-5 border-b border-slate-800">
-            <h2 class="font-bold text-lg text-emerald-400">📚 Master Chapter Progress (Net Dashboard)</h2>
-            <p class="text-xs text-slate-500 mt-0.5">Reflects cumulative progress synced past the 3:00 AM cutoff.</p>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse text-sm">
-                <thead>
-                    <tr class="bg-slate-800/60 text-slate-300 uppercase text-xs tracking-wider border-b border-slate-800">
-                        <th class="p-3 text-center">#</th>
-                        <th class="p-3">Chapter</th>
-                        <th class="p-3 text-center">Lectures</th>
-                        <th class="p-3 text-center">Revision</th>
-                        <th class="p-3 text-center">JEE PYQs</th>
-                        <th class="p-3 text-center">NEET PYQs</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-800/60">${tableRows}</tbody>
-            </table>
-        </div>
-    </div>`;
+  return map[err.code] ||
+    ("Could not complete request: " + (err.message || err.code || "Unknown error"));
 }
 
-// DAILY DASHBOARD VIEW WITH CHAPTER SELECTOR
-function changeMonth(direction){
-    calendarDate.setMonth(calendarDate.getMonth() + direction);
-    render();
+function getUserDoc() {
+  return db.collection("users")
+    .doc(currentUser.uid)
+    .collection("privateData")
+    .doc("physicsDashboard");
 }
 
-function selectDay(dateStr){
-    selectedCalendarDate = dateStr;
-    render();
-}
+async function handleUser(user) {
+  currentUser = user;
 
-function renderDailyDashboard(){
-    const totals = getMasterTotals();
-    const year = calendarDate.getFullYear();
-    const month = calendarDate.getMonth();
-    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-    const firstDayIndex = new Date(year, month, 1).getDay();
-    const totalDays = new Date(year, month + 1, 0).getDate();
-
-    let calendarCells = "";
-    for(let i = 0; i < firstDayIndex; i++){
-        calendarCells += `<div class="bg-slate-950/40 rounded-xl p-2 min-h-[85px] opacity-30"></div>`;
-    }
-
-    for(let day = 1; day <= totalDays; day++){
-        const mStr = String(month + 1).padStart(2, '0');
-        const dStr = String(day).padStart(2, '0');
-        const dateStr = `${year}-${mStr}-${dStr}`;
-
-        const dayLogs = dailyLogs[dateStr] || {};
-        const isSelected = (dateStr === selectedCalendarDate);
-        const isToday = (dateStr === getTodayKey());
-
-        let dayHours = 0;
-        Object.keys(dayLogs).forEach(chIdx => {
-            let l = dayLogs[chIdx];
-            dayHours += ((l.lec || 0) * 2) + ((l.rev || 0) * (35/60)) + ((l.jee || 0) / 15) + (l.neet ? 2 : 0);
-        });
-
-        let dayPercentage = (dayHours / totals.totalPrepHours) * 100;
-        let hasActivity = dayHours > 0;
-        let borderClass = isSelected ? "border-emerald-400 ring-2 ring-emerald-400/40" : (isToday ? "border-sky-500/50" : "border-slate-800");
-
-        calendarCells += `
-        <div onclick="selectDay('${dateStr}')" 
-        class="bg-slate-950 border ${borderClass} rounded-xl p-2.5 min-h-[90px] flex flex-col justify-between cursor-pointer hover:border-emerald-400/60 transition-all">
-            <div class="flex justify-between items-center">
-                <span class="text-xs font-bold ${isToday ? 'bg-sky-500 text-slate-950 px-1.5 py-0.5 rounded-md' : 'text-slate-400'}">${day}</span>
-                ${hasActivity ? `<span class="w-2 h-2 rounded-full bg-emerald-400"></span>` : ``}
-            </div>
-            <div>
-                ${hasActivity ? `<div class="text-[11px] text-emerald-400 font-black truncate">+${dayPercentage.toFixed(2)}%</div><div class="text-[9px] text-slate-400 truncate">${dayHours.toFixed(1)} hrs</div>` : `<div class="text-[10px] text-slate-600">-</div>`}
-            </div>
-        </div>`;
-    }
-
-    let activeDayLogs = dailyLogs[selectedCalendarDate] || {};
-    let todayKey = getTodayKey(new Date());
-    let isLocked = selectedCalendarDate < todayKey;
-
-    let chapterOptions = chapters.map((c, idx) => `<option value="${idx}">${idx + 1}. ${c[0]}</option>`).join("");
-
-    let loggedEntriesList = Object.keys(activeDayLogs).map(chIdx => {
-        let idx = Number(chIdx);
-        let log = activeDayLogs[idx];
-        let chapName = chapters[idx][0];
-        return `
-        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-                <h3 class="font-bold text-white text-base">${idx + 1}. ${chapName}</h3>
-                <div class="flex flex-wrap gap-3 text-xs text-slate-400 mt-2">
-                    <span class="bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">🎥 Lectures: <strong class="text-white">${log.lec || 0}</strong></span>
-                    <span class="bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">🔄 Revision: <strong class="text-white">${log.rev || 0}</strong></span>
-                    <span class="bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">🟣 JEE PYQs: <strong class="text-white">${formatNumber(log.jee || 0)}</strong></span>
-                    <span class="bg-slate-900 px-2.5 py-1 rounded-lg border border-slate-800">🟢 NEET PYQ: <strong class="${log.neet ? 'text-emerald-400' : 'text-slate-400'}">${log.neet ? 'Done' : 'Pending'}</strong></span>
-                </div>
-            </div>
-            ${!isLocked ? `
-            <button onclick="removeChapterLog(${idx})" class="bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 px-3 py-1.5 rounded-lg text-xs font-bold transition-all">Remove</button>
-            ` : ''}
-        </div>`;
-    }).join("");
-
-    return `
-    <div class="space-y-6">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div>
-                <h2 class="text-lg font-bold text-emerald-400">📅 Daily Dashboard & Input Hub</h2>
-                <p class="text-xs text-slate-500 mt-0.5">Select a date, pick a chapter you studied, and log your progress.</p>
-            </div>
-            <div class="flex items-center gap-3 bg-slate-950 px-4 py-2 rounded-xl border border-slate-800">
-                <button onclick="changeMonth(-1)" class="text-emerald-400 font-bold px-2">&larr;</button>
-                <span class="font-bold text-sm min-w-[120px] text-center">${monthNames[month]} ${year}</span>
-                <button onclick="changeMonth(1)" class="text-emerald-400 font-bold px-2">&rarr;</button>
-            </div>
-        </div>
-
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-6 shadow-xl">
-            <div class="grid grid-cols-7 gap-2 text-center mb-3">
-                ${daysOfWeek.map(d => `<div class="text-xs font-bold text-slate-500 uppercase">${d}</div>`).join("")}
-            </div>
-            <div class="grid grid-cols-7 gap-2">${calendarCells}</div>
-        </div>
-
-        <!-- Add Chapter Progress Form for Selected Date -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 md:p-6 shadow-xl space-y-5">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-4">
-                <div>
-                    <h2 class="font-bold text-lg text-emerald-400">✍️ Log Work for Date: ${selectedCalendarDate}</h2>
-                    <p class="text-xs text-slate-500 mt-0.5">${isLocked ? '🔒 This day is locked past 3:00 AM.' : 'Select a chapter below and add your progress for today.'}</p>
-                </div>
-            </div>
-
-            ${!isLocked ? `
-            <form onsubmit="saveChapterLogForActiveDate(event)" class="space-y-4 bg-slate-950 p-5 rounded-xl border border-slate-800">
-                <div>
-                    <label class="block text-xs uppercase font-bold text-slate-400 mb-2">Select Chapter</label>
-                    <select id="select-chapter" class="w-full bg-slate-900 border border-slate-700 focus:border-emerald-400 rounded-xl px-3 py-2 text-sm text-white">
-                        <option value="">-- Choose a chapter worked on today --</option>
-                        ${chapterOptions}
-                    </select>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-xs uppercase font-bold text-slate-400 mb-1">Lectures Today</label>
-                        <input type="number" id="input-lec" min="0" value="0" class="w-full bg-slate-900 border border-slate-700 focus:border-emerald-400 rounded-xl px-3 py-2 text-sm text-white">
-                    </div>
-                    <div>
-                        <label class="block text-xs uppercase font-bold text-slate-400 mb-1">Revision Today</label>
-                        <input type="number" id="input-rev" min="0" value="0" class="w-full bg-slate-900 border border-slate-700 focus:border-emerald-400 rounded-xl px-3 py-2 text-sm text-white">
-                    </div>
-                    <div>
-                        <label class="block text-xs uppercase font-bold text-slate-400 mb-1">JEE PYQs Today</label>
-                        <input type="number" id="input-jee" min="0" value="0" class="w-full bg-slate-900 border border-slate-700 focus:border-emerald-400 rounded-xl px-3 py-2 text-sm text-white">
-                    </div>
-                </div>
-
-                <div class="flex items-center justify-between pt-2">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" id="input-neet" class="w-4 h-4 rounded accent-emerald-500">
-                        <span class="text-sm font-semibold text-slate-300">NEET PYQ Chapter Completed</span>
-                    </label>
-                    <button type="submit" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-5 py-2 rounded-xl text-sm transition-all">Save Chapter Log</button>
-                </div>
-            </form>
-            ` : ``}
-
-            <div class="space-y-3 pt-2">
-                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400">Chapters Logged on ${selectedCalendarDate}</h3>
-                ${loggedEntriesList ? `<div class="space-y-3">${loggedEntriesList}</div>` : `<div class="text-slate-500 text-sm italic bg-slate-950 p-4 rounded-xl border border-slate-800">No chapters logged for this date yet. Select a chapter above to add entries.</div>`}
-            </div>
-        </div>
-    </div>`;
-}
-
-// MONTHLY SUMMARY VIEW
-function renderMonthlyDashboard(){
-    const monthlyMap = {};
-    const totals = getMasterTotals();
-
-    Object.keys(dailyLogs).forEach(dateStr => {
-        const monthKey = dateStr.substring(0, 7);
-        if(!monthlyMap[monthKey]) monthlyMap[monthKey] = { lec: 0, rev: 0, jee: 0, neet: 0 };
-        const dayLogs = dailyLogs[dateStr];
-        Object.keys(dayLogs).forEach(chIdx => {
-            let l = dayLogs[chIdx];
-            monthlyMap[monthKey].lec += l.lec || 0;
-            monthlyMap[monthKey].rev += l.rev || 0;
-            monthlyMap[monthKey].jee += l.jee || 0;
-            if(l.neet) monthlyMap[monthKey].neet += 1;
-        });
-    });
-
-    const months = Object.keys(monthlyMap).sort().reverse();
-    if(months.length === 0){
-        return `<div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center"><h2 class="text-xl font-bold text-emerald-400">No Monthly Activity Logged Yet</h2></div>`;
-    }
-
-    return `
-    <div class="space-y-4">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5"><h2 class="text-lg font-bold text-emerald-400">🗓️ Monthly Summary</h2></div>
-        <div class="grid md:grid-cols-2 gap-4">
-            ${months.map(m => {
-                const stat = monthlyMap[m];
-                const monthHours = (stat.lec * 2) + (stat.rev * (35/60)) + (stat.jee / 15) + (stat.neet * 2);
-                const monthTotalPct = (monthHours / totals.totalPrepHours) * 100;
-                return `
-                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
-                    <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-                        <span class="font-bold text-emerald-400 text-lg">${m}</span>
-                        <span class="text-xs font-semibold px-2.5 py-1 bg-emerald-500/20 text-emerald-400 rounded-full">+${monthTotalPct.toFixed(2)}%</span>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3 text-sm">
-                        <div class="bg-slate-950 p-3 rounded-xl"><div class="text-xs text-slate-500">Lectures</div><div class="text-lg font-bold">${stat.lec}</div></div>
-                        <div class="bg-slate-950 p-3 rounded-xl"><div class="text-xs text-slate-500">Revisions</div><div class="text-lg font-bold">${stat.rev}</div></div>
-                        <div class="bg-slate-950 p-3 rounded-xl"><div class="text-xs text-slate-500">JEE PYQs</div><div class="text-lg font-bold">${formatNumber(stat.jee)}</div></div>
-                        <div class="bg-slate-950 p-3 rounded-xl"><div class="text-xs text-slate-500">NEET Chapters</div><div class="text-lg font-bold">${stat.neet}</div></div>
-                    </div>
-                </div>`;
-            }).join("")}
-        </div>
-    </div>`;
-}
-
-function resetData(){
-    if(!confirm("Reset all daily logs?")) return;
+  if (!user) {
+    document.getElementById("app").classList.add("hidden");
+    document.getElementById("auth-screen").classList.remove("hidden");
     dailyLogs = {};
-    saveData();
+    return;
+  }
+
+  document.getElementById("auth-screen").classList.add("hidden");
+  document.getElementById("app").classList.remove("hidden");
+  document.getElementById("user-label").textContent =
+    "Signed in as " + (user.displayName || user.email || "your account");
+
+  setSyncStatus("Loading cloud data…", "text-amber-300");
+
+  try {
+    const snap = await getUserDoc().get();
+
+    dailyLogs =
+      snap.exists &&
+      snap.data().dailyLogs &&
+      typeof snap.data().dailyLogs === "object"
+        ? snap.data().dailyLogs
+        : {};
+
+    selectedCalendarDate = getTodayKey();
+    calendarDate = new Date();
+
+    setSyncStatus("Cloud synced");
     render();
+  } catch (err) {
+    dailyLogs = {};
+    setSyncStatus("Cloud load failed", "text-red-300");
+
+    document.getElementById("view-container").innerHTML =
+      '<div class="bg-red-950/40 border border-red-800 rounded-xl p-5">' +
+      'Could not load your cloud data. Check your internet connection and Firestore security rules, then sign out and sign in again.' +
+      '<div class="text-xs mt-2 text-red-200">' +
+      escapeHtml(err.message || "") +
+      "</div></div>";
+  }
 }
 
-function exportData(){
-    const file = new Blob([JSON.stringify(dailyLogs, null, 2)], { type: "application/json" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(file);
-    link.download = "NEET-Physics-DailyLogs-Backup.json";
-    link.click();
+async function signOutUser() {
+  try {
+    await firebase.auth().signOut();
+  } catch (e) {
+    alert(authError(e));
+  }
 }
 
-render();
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[c]));
+}
+
+async function saveData() {
+  if (!currentUser || !db) {
+    throw new Error("You are signed out. Sign in again before saving.");
+  }
+
+  saving = true;
+  setSyncStatus("Saving…", "text-amber-300");
+
+  try {
+    await getUserDoc().set({
+      dailyLogs: dailyLogs,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+
+    setSyncStatus("Saved to cloud");
+  } catch (err) {
+    setSyncStatus("Save failed", "text-red-300");
+    throw err;
+  } finally {
+    saving = false;
+  }
+}
+
+// The study day changes at 3:00 AM local time.
+function getTodayKey(customDate = new Date()) {
+  const d = new Date(customDate);
+
+  if (d.getHours() < 3) {
+    d.setDate(d.getDate() - 1);
+  }
+
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function getMasterTotals() {
+  let l = 0, r = 0, j = 0;
+
+  chapters.forEach(c => {
+    l += c[1];
+    r += c[2];
+    j += c[3];
+  });
+
+  return {
+    lectureTotal: l,
+    revisionTotal: r,
+    jeeTotal: j,
+    neetTotal: chapters.length,
+    totalPrepHours: l * 2 + r * (35 / 60) + j / 15 + chapters.length * 2
+  };
+}
+
+function clamp(v, min, max) {
+  v = Number(v);
+  if (!Number.isFinite(v)) v = 0;
+  return Math.max(min, Math.min(v, max));
+}
+
+function percentage(done, total) {
+  return total === 0 ? 0 : done / total * 100;
+}
+
+function formatNumber(n) {
+  return Number(n).toLocaleString("en-IN", { maximumFractionDigits: 1 });
+}
+
+function switchView(view) {
+  currentView = view;
+
+  ["net", "daily", "monthly"].forEach(v => {
+    const b = document.getElementById("tab-" + v);
+    b.className =
+      "px-4 py-2 rounded-xl font-bold text-sm " +
+      (v === view
+        ? "bg-emerald-500 text-slate-950"
+        : "bg-slate-800 text-slate-400 hover:text-white");
+  });
+
+  render();
+}
+
+function render() {
+  if (!currentUser) return;
+
+  const container = document.getElementById("view-container");
+
+  container.innerHTML =
+    currentView === "net"
+      ? renderNetDashboard()
+      : currentView === "daily"
+        ? renderDailyDashboard()
+        : renderMonthlyDashboard();
+}
+
+function getNetData() {
+  const todayKey = getTodayKey();
+
+  const data = chapters.map(() => ({
+    lec: 0,
+    rev: 0,
+    jee: 0,
+    neet: false
+  }));
+
+  Object.keys(dailyLogs).forEach(date => {
+    if (date < todayKey) {
+      Object.keys(dailyLogs[date] || {}).forEach(key => {
+        const i = Number(key);
+
+        if (!data[i] || !dailyLogs[date][key]) return;
+
+        const x = dailyLogs[date][key];
+        data[i].lec += Number(x.lec) || 0;
+        data[i].rev += Number(x.rev) || 0;
+        data[i].jee += Number(x.jee) || 0;
+
+        if (x.neet) data[i].neet = true;
+      });
+    }
+  });
+
+  return data;
+}
+
+function renderNetDashboard() {
+  const data = getNetData();
+
+  let ld = 0, lt = 0, rd = 0, rt = 0;
+  let jd = 0, jt = 0, nd = 0, nt = chapters.length;
+
+  chapters.forEach((c, i) => {
+    ld += data[i].lec;
+    lt += c[1];
+    rd += data[i].rev;
+    rt += c[2];
+    jd += data[i].jee;
+    jt += c[3];
+    if (data[i].neet) nd++;
+  });
+
+  const total = (lt * 2) + (rt * 35 / 60) + (jt / 15) + (nt * 2);
+  const done = (ld * 2) + (rd * 35 / 60) + (jd / 15) + (nd * 2);
+  const pct = total ? done / total * 100 : 0;
+
+  const metrics = [
+    ["🎥 Lectures", percentage(ld, lt), `${ld}/${lt}`],
+    ["🔄 Revision", percentage(rd, rt), `${rd}/${rt}`],
+    ["🟣 JEE Main PYQs", percentage(jd, jt), `${formatNumber(jd)}/${formatNumber(jt)}`],
+    ["🟢 NEET PYQs", percentage(nd, nt), `${nd}/${nt} chapters`]
+  ];
+
+  const rows = chapters.map((c, i) => {
+    const d = data[i];
+
+    return `<tr class="hover:bg-slate-800/45">
+      <td class="p-3 text-center text-slate-500">${i + 1}</td>
+      <td class="p-3 font-medium">${c[0]}</td>
+      <td class="p-3 text-center">${d.lec} <span class="text-slate-500">/ ${c[1]}</span></td>
+      <td class="p-3 text-center">${d.rev} <span class="text-slate-500">/ ${c[2]}</span></td>
+      <td class="p-3 text-center">${formatNumber(d.jee)} <span class="text-slate-500">/ ${c[3]}</span></td>
+      <td class="p-3 text-center">
+        <span class="px-3 py-1 rounded-lg text-xs ${d.neet ? "bg-emerald-500/20 text-emerald-400" : "bg-slate-800 text-slate-400"}">
+          ${d.neet ? "✓ Done" : "Pending"}
+        </span>
+      </td>
+    </tr>`;
+  }).join("");
+
+  return `
+  <div class="bg-gradient-to-r from-emerald-500/20 via-slate-900 to-sky-500/20 border border-emerald-500/30 rounded-2xl p-5 md:p-7">
+    <div class="flex flex-col md:flex-row md:justify-between gap-5">
+      <div>
+        <div class="text-sm uppercase tracking-widest font-bold text-emerald-400">🔥 TOTAL PREPARATION</div>
+        <div class="text-5xl md:text-6xl font-black mt-2">${pct.toFixed(1)}%</div>
+        <div class="text-slate-400 mt-2">${done.toFixed(1)} hours completed / ${total.toFixed(1)} hours total</div>
+      </div>
+      <div class="md:w-1/2">
+        <div class="flex justify-between text-sm mb-2">
+          <span class="text-slate-400">Overall Progress</span>
+          <b class="text-emerald-400">${pct.toFixed(1)}%</b>
+        </div>
+        <div class="h-5 bg-slate-800 rounded-full overflow-hidden">
+          <div class="h-full bg-emerald-400" style="width:${Math.min(100, pct)}%"></div>
+        </div>
+        <div class="text-xs text-slate-500 mt-2">${(total - done).toFixed(1)} hours remaining</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    ${metrics.map(m => `
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+        <div class="text-xs text-slate-400 uppercase font-bold">${m[0]}</div>
+        <div class="text-2xl font-black text-emerald-400 mt-1">${m[1].toFixed(1)}%</div>
+        <div class="text-xs text-slate-400 mt-1">${m[2]}</div>
+        <div class="h-2 bg-slate-800 rounded-full mt-3 overflow-hidden">
+          <div class="h-full bg-emerald-400" style="width:${Math.min(100, m[1])}%"></div>
+        </div>
+      </div>
+    `).join("")}
+  </div>
+
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+    <div class="p-5 border-b border-slate-800">
+      <h2 class="font-bold text-lg text-emerald-400">📚 Master Chapter Progress (Net Dashboard)</h2>
+      <p class="text-xs text-slate-500 mt-1">Cumulative progress includes dates before the 3:00 AM cutoff. Enter progress only in Daily Dashboard.</p>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm">
+        <thead>
+          <tr class="bg-slate-800/60 text-slate-300 uppercase text-xs">
+            <th class="p-3 text-center">#</th>
+            <th class="p-3">Chapter</th>
+            <th class="p-3 text-center">Lectures</th>
+            <th class="p-3 text-center">Revision</th>
+            <th class="p-3 text-center">JEE PYQs</th>
+            <th class="p-3 text-center">NEET PYQs</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-800/60">${rows}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+function changeMonth(n) {
+  calendarDate.setMonth(calendarDate.getMonth() + n);
+  render();
+}
+
+function selectDay(s) {
+  selectedCalendarDate = s;
+  render();
+}
+
+function renderDailyDashboard() {
+  const totals = getMasterTotals();
+  const y = calendarDate.getFullYear();
+  const m = calendarDate.getMonth();
+
+  const names = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  const dow = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  let cells = "";
+
+  for (let i = 0; i < new Date(y, m, 1).getDay(); i++) {
+    cells += '<div class="min-h-[80px] rounded-xl bg-slate-950/40"></div>';
+  }
+
+  for (let day = 1; day <= new Date(y, m + 1, 0).getDate(); day++) {
+    const key = `${y}-${String(m + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    const logs = dailyLogs[key] || {};
+    const selected = key === selectedCalendarDate;
+    const today = key === getTodayKey();
+
+    let hrs = 0;
+    Object.values(logs).forEach(l => {
+      hrs += (Number(l.lec) || 0) * 2
+        + (Number(l.rev) || 0) * 35 / 60
+        + (Number(l.jee) || 0) / 15
+        + (l.neet ? 2 : 0);
+    });
+
+    cells += `
+      <button onclick="selectDay('${key}')" class="text-left bg-slate-950 border ${selected ? "border-emerald-400 ring-2 ring-emerald-400/30" : today ? "border-sky-500/60" : "border-slate-800"} rounded-xl p-2 min-h-[80px] hover:border-emerald-400">
+        <span class="text-xs font-bold ${today ? "text-sky-400" : "text-slate-400"}">${day}</span>
+        <div class="mt-3 text-[11px] ${hrs ? "text-emerald-400" : "text-slate-600"}">${hrs ? "+" + (hrs / totals.totalPrepHours * 100).toFixed(2) + "%" : "-"}</div>
+        <div class="text-[10px] text-slate-500">${hrs ? hrs.toFixed(1) + " hrs" : ""}</div>
+      </button>`;
+  }
+
+  const logs = dailyLogs[selectedCalendarDate] || {};
+  const locked = selectedCalendarDate < getTodayKey();
+  const opts = chapters.map((c, i) => `<option value="${i}">${i + 1}. ${c[0]}</option>`).join("");
+
+  const entries = Object.keys(logs).map(k => {
+    const i = Number(k);
+    const l = logs[k];
+
+    return `
+      <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col md:flex-row md:justify-between gap-3">
+        <div>
+          <b>${i + 1}. ${chapters[i][0]}</b>
+          <div class="flex flex-wrap gap-2 text-xs text-slate-400 mt-2">
+            <span>Lectures: <b class="text-white">${l.lec || 0}</b></span>
+            <span>Revision: <b class="text-white">${l.rev || 0}</b></span>
+            <span>JEE PYQs: <b class="text-white">${formatNumber(l.jee || 0)}</b></span>
+            <span>NEET: <b class="${l.neet ? "text-emerald-400" : "text-slate-400"}">${l.neet ? "Done" : "Pending"}</b></span>
+          </div>
+        </div>
+        ${!locked ? `<button onclick="removeChapterLog(${i})" class="self-start bg-red-500/20 text-red-300 px-3 py-2 rounded-lg text-xs font-bold">Remove</button>` : ""}
+      </div>`;
+  }).join("");
+
+  return `
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col md:flex-row md:justify-between gap-4">
+    <div>
+      <h2 class="text-lg font-bold text-emerald-400">📅 Daily Dashboard & Input Hub</h2>
+      <p class="text-xs text-slate-500 mt-1">Add progress here. Your other dashboards update automatically.</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <button onclick="changeMonth(-1)" class="text-emerald-400 font-bold px-2">←</button>
+      <b>${names[m]} ${y}</b>
+      <button onclick="changeMonth(1)" class="text-emerald-400 font-bold px-2">→</button>
+    </div>
+  </div>
+
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-6">
+    <div class="grid grid-cols-7 gap-2 text-center mb-3">
+      ${dow.map(d => `<div class="text-xs font-bold text-slate-500">${d}</div>`).join("")}
+    </div>
+    <div class="grid grid-cols-7 gap-2">${cells}</div>
+  </div>
+
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-5">
+    <div>
+      <h2 class="font-bold text-lg text-emerald-400">✍️ Log Work: ${selectedCalendarDate}</h2>
+      <p class="text-xs text-slate-500 mt-1">${locked ? "🔒 This day is locked after the 3:00 AM cutoff." : "Choose a chapter and enter the work completed."}</p>
+    </div>
+
+    ${!locked ? `
+    <form onsubmit="saveChapterLogForActiveDate(event)" class="space-y-4 bg-slate-950 p-4 md:p-5 rounded-xl border border-slate-800">
+      <div>
+        <label class="block text-xs uppercase font-bold text-slate-400 mb-2">Select chapter</label>
+        <select id="select-chapter" required class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3">
+          <option value="">-- Choose chapter --</option>
+          ${opts}
+        </select>
+      </div>
+
+      <div class="grid sm:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Lectures today</label>
+          <input type="number" id="input-lec" min="0" step="1" value="0" required class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Revision today</label>
+          <input type="number" id="input-rev" min="0" step="1" value="0" required class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">JEE PYQs today</label>
+          <input type="number" id="input-jee" min="0" step="1" value="0" required class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3">
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <label class="flex items-center gap-2 text-sm">
+          <input type="checkbox" id="input-neet" class="accent-emerald-500">
+          NEET PYQ chapter completed
+        </label>
+        <button id="save-log-btn" type="submit" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-5 py-3 rounded-xl">Save Chapter Log</button>
+      </div>
+    </form>
+    ` : ""}
+
+    <div class="space-y-3">
+      <h3 class="text-sm font-bold uppercase text-slate-400">Chapters logged on this date</h3>
+      ${entries || '<div class="text-slate-500 text-sm bg-slate-950 p-4 rounded-xl border border-slate-800">No chapters logged for this date yet.</div>'}
+    </div>
+  </div>`;
+}
+
+async function saveChapterLogForActiveDate(e) {
+  e.preventDefault();
+  if (saving) return;
+
+  const date = selectedCalendarDate;
+
+  if (date < getTodayKey()) {
+    alert("This day is locked past the 3:00 AM cutoff.");
+    return;
+  }
+
+  const field = document.getElementById("select-chapter");
+  const idx = field.value;
+
+  if (idx === "") {
+    alert("Please select a chapter.");
+    return;
+  }
+
+  const old = JSON.parse(JSON.stringify(dailyLogs));
+
+  const lec = clamp(document.getElementById("input-lec").value, 0, chapters[idx][1]);
+  const rev = clamp(document.getElementById("input-rev").value, 0, chapters[idx][2]);
+  const jee = clamp(document.getElementById("input-jee").value, 0, chapters[idx][3]);
+  const neet = document.getElementById("input-neet").checked;
+
+  if (!dailyLogs[date]) dailyLogs[date] = {};
+
+  if (!lec && !rev && !jee && !neet) {
+    delete dailyLogs[date][idx];
+    if (!Object.keys(dailyLogs[date]).length) delete dailyLogs[date];
+  } else {
+    dailyLogs[date][idx] = { lec, rev, jee, neet };
+  }
+
+  document.getElementById("save-log-btn").disabled = true;
+
+  try {
+    await saveData();
+    render();
+  } catch (err) {
+    dailyLogs = old;
+    render();
+    alert("Cloud save failed. Your change was not saved. Check internet/Firebase rules and try again.\n" + (err.message || ""));
+  } finally {
+    const b = document.getElementById("save-log-btn");
+    if (b) b.disabled = false;
+  }
+}
+
+async function removeChapterLog(idx) {
+  if (saving) return;
+
+  const date = selectedCalendarDate;
+
+  if (date < getTodayKey()) {
+    alert("This day is locked past the 3:00 AM cutoff.");
+    return;
+  }
+
+  const old = JSON.parse(JSON.stringify(dailyLogs));
+
+  if (dailyLogs[date]) {
+    delete dailyLogs[date][idx];
+    if (!Object.keys(dailyLogs[date]).length) delete dailyLogs[date];
+  }
+
+  try {
+    await saveData();
+    render();
+  } catch (err) {
+    dailyLogs = old;
+    render();
+    alert("Could not save removal to cloud. Nothing was changed remotely. Check your connection and try again.");
+  }
+}
+
+function renderMonthlyDashboard() {
+  const map = {};
+  const totals = getMasterTotals();
+
+  Object.keys(dailyLogs).forEach(date => {
+    const month = date.slice(0, 7);
+    if (!map[month]) map[month] = { lec: 0, rev: 0, jee: 0, neet: 0 };
+
+    Object.values(dailyLogs[date] || {}).forEach(l => {
+      map[month].lec += Number(l.lec) || 0;
+      map[month].rev += Number(l.rev) || 0;
+      map[month].jee += Number(l.jee) || 0;
+      if (l.neet) map[month].neet++;
+    });
+  });
+
+  const months = Object.keys(map).sort().reverse();
+
+  if (!months.length) {
+    return `
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center">
+        <h2 class="text-xl font-bold text-emerald-400">No Monthly Activity Logged Yet</h2>
+        <p class="text-slate-400 text-sm mt-2">Add entries in Daily Dashboard to see your summary.</p>
+      </div>`;
+  }
+
+  return `
+  <div class="space-y-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+      <h2 class="text-lg font-bold text-emerald-400">🗓️ Monthly Summary</h2>
+      <p class="text-xs text-slate-500 mt-1">Read-only summary of your daily logs.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      ${months.map(m => {
+        const s = map[m];
+        const hours = s.lec * 2 + s.rev * 35 / 60 + s.jee / 15 + s.neet * 2;
+        const pct = hours / totals.totalPrepHours * 100;
+
+        return `
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+          <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+            <span class="font-bold text-emerald-400 text-lg">${m}</span>
+            <span class="text-xs font-semibold px-2.5 py-1 bg-emerald-500/20 text-emerald-400 rounded-full">+${pct.toFixed(2)}%</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div class="bg-slate-950 p-3 rounded-xl">
+              <div class="text-xs text-slate-500">Lectures</div>
+              <div class="text-lg font-bold">${s.lec}</div>
+            </div>
+            <div class="bg-slate-950 p-3 rounded-xl">
+              <div class="text-xs text-slate-500">Revisions</div>
+              <div class="text-lg font-bold">${s.rev}</div>
+            </div>
+            <div class="bg-slate-950 p-3 rounded-xl">
+              <div class="text-xs text-slate-500">JEE PYQs</div>
+              <div class="text-lg font-bold">${formatNumber(s.jee)}</div>
+            </div>
+            <div class="bg-slate-950 p-3 rounded-xl">
+              <div class="text-xs text-slate-500">NEET chapters</div>
+              <div class="text-lg font-bold">${s.neet}</div>
+            </div>
+          </div>
+        </div>`;
+      }).join("")}
+    </div>
+  </div>`;
+}
+
+if (FIREBASE_CONFIG_READY) {
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+
+  firebase.auth().onAuthStateChanged(user => {
+    handleUser(user).catch(err => {
+      console.error(err);
+      setSyncStatus("Could not load data", "text-red-300");
+    });
+  });
+} else {
+  setAuthMessage("Setup needed: create a Firebase project and paste its Web App config into this file.");
+}
 </script>
 </body>
 </html>
-  
