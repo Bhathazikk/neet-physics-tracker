@@ -56,7 +56,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
     <div class="flex flex-col lg:flex-row justify-between gap-5 items-start lg:items-center">
       <div>
         <h1 class="text-2xl md:text-3xl font-bold text-emerald-400">⚡ NEET Physics Master Dashboard</h1>
-        <p class="text-slate-400 text-sm mt-1">Lecture: 2h • Revision: 35m/lecture • JEE PYQs: 15 Q/hr • NEET PYQs: ~2h/chapter</p>
+        <p class="text-slate-400 text-sm mt-1">Lecture: 2h • Revision: 50m/lecture • JEE PYQs: 15 Q/hr • NEET PYQs: ~2h/chapter</p>
         <p id="user-label" class="text-xs text-slate-500 mt-2"></p>
       </div>
       <div class="flex items-center gap-3">
@@ -364,7 +364,7 @@ function getMasterTotals() {
     revisionTotal: r,
     jeeTotal: j,
     neetTotal: chapters.length,
-    totalPrepHours: l * 2 + r * (35 / 60) + j / 15 + chapters.length * 2
+    totalPrepHours: l * 2 + r * (50 / 60) + j / 15 + chapters.length * 2
   };
 }
 
@@ -456,8 +456,8 @@ function renderNetDashboard() {
     if (data[i].neet) nd++;
   });
 
-  const total = (lt * 2) + (rt * 35 / 60) + (jt / 15) + (nt * 2);
-  const done = (ld * 2) + (rd * 35 / 60) + (jd / 15) + (nd * 2);
+  const total = (lt * 2) + (rt * 50 / 60) + (jt / 15) + (nt * 2);
+  const done = (ld * 2) + (rd * 50 / 60) + (jd / 15) + (nd * 2);
   const pct = total ? done / total * 100 : 0;
 
   const metrics = [
@@ -577,7 +577,7 @@ function renderDailyDashboard() {
     let hrs = 0;
     Object.values(logs).forEach(l => {
       hrs += (Number(l.lec) || 0) * 2
-        + (Number(l.rev) || 0) * 35 / 60
+        + (Number(l.rev) || 0) * 50 / 60
         + (Number(l.jee) || 0) / 15
         + (l.neet ? 2 : 0);
     });
@@ -794,7 +794,7 @@ function renderMonthlyDashboard() {
     <div class="grid md:grid-cols-2 gap-4">
       ${months.map(m => {
         const s = map[m];
-        const hours = s.lec * 2 + s.rev * 35 / 60 + s.jee / 15 + s.neet * 2;
+        const hours = s.lec * 2 + s.rev * 50 / 60 + s.jee / 15 + s.neet * 2;
         const pct = hours / totals.totalPrepHours * 100;
 
         return `
