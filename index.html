@@ -9,10 +9,10 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <style>
-input[type=number]{-moz-appearance:textfield}
-input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button{opacity:1}
-button:disabled{opacity:.5;cursor:not-allowed}
+  input[type=number]{-moz-appearance:textfield}
+  input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{opacity:1}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  input,select,button{transition:background-color .15s,border-color .15s}
 </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen p-3 md:p-8">
@@ -23,12 +23,10 @@ button:disabled{opacity:.5;cursor:not-allowed}
     <h1 class="text-2xl font-black text-emerald-400">NEET Physics Dashboard</h1>
     <p class="text-sm text-slate-400 mt-2">Sign in to access your personal, cloud-saved progress.</p>
   </div>
-
   <div class="flex gap-2 mb-5">
     <button id="mode-login" onclick="setAuthMode('login')" class="flex-1 bg-emerald-500 text-slate-950 rounded-xl py-2 font-bold">Sign in</button>
     <button id="mode-signup" onclick="setAuthMode('signup')" class="flex-1 bg-slate-800 text-slate-300 rounded-xl py-2 font-bold">Create account</button>
   </div>
-
   <form id="auth-form" onsubmit="submitAuth(event)" class="space-y-4">
     <div id="name-wrap" class="hidden">
       <label class="block text-xs text-slate-400 mb-1">Your name (optional)</label>
@@ -44,7 +42,6 @@ button:disabled{opacity:.5;cursor:not-allowed}
     </div>
     <button id="auth-submit" type="submit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl py-3 font-black">Sign in</button>
   </form>
-
   <button onclick="signInGoogle()" class="w-full mt-3 bg-slate-800 hover:bg-slate-700 rounded-xl py-3 font-bold">Continue with Google</button>
   <button id="forgot-btn" onclick="resetPassword()" class="w-full mt-3 text-sm text-sky-400 hover:text-sky-300">Forgot password?</button>
   <p id="auth-message" role="status" class="text-sm mt-4 text-center text-amber-300"></p>
@@ -56,7 +53,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
     <div class="flex flex-col lg:flex-row justify-between gap-5 items-start lg:items-center">
       <div>
         <h1 class="text-2xl md:text-3xl font-bold text-emerald-400">⚡ NEET Physics Master Dashboard</h1>
-        <p class="text-slate-400 text-sm mt-1">Lecture: 2h • Revision: 50m/lecture • JEE PYQs: 15 Q/hr • NEET PYQs: ~2h/chapter</p>
+        <p class="text-slate-400 text-sm mt-1">Customizable activities • Chapter targets • Daily logs • Cloud sync</p>
         <p id="user-label" class="text-xs text-slate-500 mt-2"></p>
       </div>
       <div class="flex items-center gap-3">
@@ -65,16 +62,19 @@ button:disabled{opacity:.5;cursor:not-allowed}
       </div>
     </div>
     <div class="flex flex-wrap gap-2 border-t border-slate-800 pt-4">
-      <button onclick="switchView('net')" id="tab-net" class="px-4 py-2 rounded-xl font-bold text-sm bg-emerald-500 text-slate-950">📊 Net Dashboard</button>
-      <button onclick="switchView('daily')" id="tab-daily" class="px-4 py-2 rounded-xl font-bold text-sm bg-slate-800 text-slate-400">📅 Daily Dashboard & Input</button>
-      <button onclick="switchView('monthly')" id="tab-monthly" class="px-4 py-2 rounded-xl font-bold text-sm bg-slate-800 text-slate-400">🗓️ Monthly Summary</button>
+      <button data-tab="net" onclick="switchView('net')" id="tab-net" class="px-4 py-2 rounded-xl font-bold text-sm bg-emerald-500 text-slate-950">📊 Net Dashboard</button>
+      <button data-tab="daily" onclick="switchView('daily')" id="tab-daily" class="px-4 py-2 rounded-xl font-bold text-sm bg-slate-800 text-slate-400">📅 Daily Dashboard & Input</button>
+      <button data-tab="monthly" onclick="switchView('monthly')" id="tab-monthly" class="px-4 py-2 rounded-xl font-bold text-sm bg-slate-800 text-slate-400">🗓️ Monthly Summary</button>
+      <button data-tab="settings" onclick="switchView('settings')" id="tab-settings" class="px-4 py-2 rounded-xl font-bold text-sm bg-slate-800 text-slate-400">⚙️ Customize</button>
     </div>
   </header>
   <div id="view-container" class="space-y-6"></div>
 </div>
 
 <script>
+"use strict";
 
+// Keep this Firebase project configuration unchanged to use the same cloud project.
 const firebaseConfig = {
   apiKey: "AIzaSyBLxMajJ8mUXTmhY_vCbsJoXtYaVcHmDOw",
   authDomain: "neet-physics-dashboard.firebaseapp.com",
@@ -84,11 +84,6 @@ const firebaseConfig = {
   appId: "1:896252546261:web:8baa3c7fc6c246528d265c",
   measurementId: "G-VZ9XLDRTY1"
 };
-
-const FIREBASE_CONFIG_READY =
-  firebaseConfig.apiKey !== "PASTE_YOUR_FIREBASE_API_KEY_HERE" &&
-  firebaseConfig.projectId !== "YOUR_PROJECT_ID";
-
 
 const chapters = [
   ["Units and Measurements",11,11,181],
@@ -123,6 +118,33 @@ const chapters = [
   ["Semiconductor Electronics",5,5,140]
 ];
 
+const TRACKS = {
+  "NEET / Full Physics": {start:0,end:30},
+  "JEE / Full Physics": {start:0,end:30},
+  "Class 11 Medical": {start:0,end:16},
+  "Class 12 Medical": {start:16,end:30}
+};
+
+function defaultActivities() {
+  return [
+    {id:"lec",name:"Lectures completed",type:"count",minutesPerUnit:120,questionsPerHour:15},
+    {id:"rev",name:"Revision sessions",type:"count",minutesPerUnit:50,questionsPerHour:15},
+    {id:"jee",name:"JEE Main PYQs",type:"questions",minutesPerUnit:0,questionsPerHour:15},
+    {id:"neet",name:"NEET PYQs / chapter practice",type:"count",minutesPerUnit:120,questionsPerHour:15}
+  ];
+}
+
+function defaultSettings() {
+  return {
+    track:"NEET / Full Physics",
+    activities:defaultActivities(),
+    chapters:chapters.map(c => ({
+      name:c[0],
+      targetHours:c[1]*2 + c[2]*(50/60) + c[3]/15 + 2
+    }))
+  };
+}
+
 let currentView = "net";
 let dailyLogs = {};
 let calendarDate = new Date();
@@ -131,716 +153,1006 @@ let currentUser = null;
 let db = null;
 let authMode = "login";
 let saving = false;
+let saveTimer = null;
+let settings = defaultSettings();
+let settingsLoaded = false;
 
-function setSyncStatus(s, color = "text-emerald-300") {
-  const el = document.getElementById("sync-status");
-  if (el) {
-    el.className = "text-xs " + color;
-    el.textContent = s;
-  }
+function setSyncStatus(s,color="text-emerald-300") {
+  const el=document.getElementById("sync-status");
+  if(el){el.className="text-xs "+color;el.textContent=s;}
 }
 
 function setAuthMessage(s) {
-  document.getElementById("auth-message").textContent = s;
+  const el=document.getElementById("auth-message");
+  if(el) el.textContent=s;
 }
 
-function setAuthMode(mode) {
-  authMode = mode;
-  const signup = mode === "signup";
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
 
-  document.getElementById("name-wrap").classList.toggle("hidden", !signup);
-  document.getElementById("auth-submit").textContent =
-    signup ? "Create account" : "Sign in";
+function clamp(v,min,max) {
+  v=Number(v);
+  if(!Number.isFinite(v))v=0;
+  return Math.max(min,Math.min(v,max));
+}
 
-  document.getElementById("mode-login").className =
-    (!signup
-      ? "flex-1 bg-emerald-500 text-slate-950"
-      : "flex-1 bg-slate-800 text-slate-300") +
-    " rounded-xl py-2 font-bold";
+function formatNumber(n) {
+  return Number(n||0).toLocaleString("en-IN",{maximumFractionDigits:1});
+}
 
-  document.getElementById("mode-signup").className =
-    (signup
-      ? "flex-1 bg-emerald-500 text-slate-950"
-      : "flex-1 bg-slate-800 text-slate-300") +
-    " rounded-xl py-2 font-bold";
+function formatHours(n) {
+  return `${Number(n||0).toFixed(1)} h`;
+}
 
-  document.getElementById("forgot-btn").classList.toggle("hidden", signup);
-  setAuthMessage("");
+function percentage(done,total) {
+  return total ? done/total*100 : 0;
+}
+
+function getTodayKey(customDate=new Date()) {
+  const d=new Date(customDate);
+  if(d.getHours()<3)d.setDate(d.getDate()-1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+
+function displayDate(key) {
+  const d=new Date(key+"T12:00:00");
+  return d.toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"});
 }
 
 function firebaseReady() {
-  if (!FIREBASE_CONFIG_READY) {
-    setAuthMessage("Firebase is not configured yet. Add your Firebase Web App config in index.html first.");
+  if(!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+    setAuthMessage("Firebase configuration is missing.");
     return false;
   }
   return true;
 }
 
-async function submitAuth(e) {
+function setAuthMode(mode) {
+  authMode=mode;
+  const signup=mode==="signup";
+  document.getElementById("name-wrap").classList.toggle("hidden",!signup);
+  document.getElementById("auth-submit").textContent=signup?"Create account":"Sign in";
+  document.getElementById("mode-login").className=(!signup?"flex-1 bg-emerald-500 text-slate-950":"flex-1 bg-slate-800 text-slate-300")+" rounded-xl py-2 font-bold";
+  document.getElementById("mode-signup").className=(signup?"flex-1 bg-emerald-500 text-slate-950":"flex-1 bg-slate-800 text-slate-300")+" rounded-xl py-2 font-bold";
+  document.getElementById("forgot-btn").classList.toggle("hidden",signup);
+  setAuthMessage("");
+}
+
+function authError(err) {
+  const map={
+    "auth/email-already-in-use":"This email already has an account. Sign in instead.",
+    "auth/invalid-email":"Please enter a valid email address.",
+    "auth/weak-password":"Use a password with at least 6 characters.",
+    "auth/user-not-found":"No account found for this email. Create an account first.",
+    "auth/wrong-password":"Incorrect email or password.",
+    "auth/invalid-credential":"Incorrect email or password.",
+    "auth/popup-closed-by-user":"Google sign-in was cancelled.",
+    "auth/unauthorized-domain":"Add this website domain in Firebase Authentication → Settings → Authorized domains."
+  };
+  return map[err.code] || ("Could not complete request: "+(err.message||err.code||"Unknown error"));
+} async function submitAuth(e) {
   e.preventDefault();
-  if (!firebaseReady()) return;
-
-  const email = document.getElementById("auth-email").value.trim();
-  const password = document.getElementById("auth-password").value;
-  const btn = document.getElementById("auth-submit");
-
-  btn.disabled = true;
+  if(!firebaseReady())return;
+  const email=document.getElementById("auth-email").value.trim();
+  const password=document.getElementById("auth-password").value;
+  const btn=document.getElementById("auth-submit");
+  btn.disabled=true;
   setAuthMessage("Please wait…");
-
   try {
-    if (authMode === "signup") {
-      const cred = await firebase.auth().createUserWithEmailAndPassword(email, password);
-      const name = document.getElementById("auth-name").value.trim();
-      if (name) await cred.user.updateProfile({ displayName: name });
+    if(authMode==="signup") {
+      const cred=await firebase.auth().createUserWithEmailAndPassword(email,password);
+      const name=document.getElementById("auth-name").value.trim();
+      if(name)await cred.user.updateProfile({displayName:name});
     } else {
-      await firebase.auth().signInWithEmailAndPassword(email, password);
+      await firebase.auth().signInWithEmailAndPassword(email,password);
     }
     setAuthMessage("");
-  } catch (err) {
+  } catch(err) {
     setAuthMessage(authError(err));
   } finally {
-    btn.disabled = false;
+    btn.disabled=false;
   }
 }
 
 async function signInGoogle() {
-  if (!firebaseReady()) return;
+  if(!firebaseReady())return;
   try {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    await firebase.auth().signInWithPopup(provider);
-  } catch (err) {
+    await firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider());
+  } catch(err) {
     setAuthMessage(authError(err));
   }
 }
 
 async function resetPassword() {
-  if (!firebaseReady()) return;
-
-  const email = document.getElementById("auth-email").value.trim();
-  if (!email) {
+  if(!firebaseReady())return;
+  const email=document.getElementById("auth-email").value.trim();
+  if(!email) {
     setAuthMessage("Enter your email first, then tap Forgot password.");
     return;
   }
-
   try {
     await firebase.auth().sendPasswordResetEmail(email);
     setAuthMessage("Password reset email sent. Check your inbox.");
-  } catch (err) {
+  } catch(err) {
     setAuthMessage(authError(err));
-  }
-}
-
-function authError(err) {
-  const map = {
-    "auth/email-already-in-use": "This email already has an account. Sign in instead.",
-    "auth/invalid-email": "Please enter a valid email address.",
-    "auth/weak-password": "Use a password with at least 6 characters.",
-    "auth/user-not-found": "No account found for this email. Create an account first.",
-    "auth/wrong-password": "Incorrect email or password.",
-    "auth/invalid-credential": "Incorrect email or password.",
-    "auth/popup-closed-by-user": "Google sign-in was cancelled.",
-    "auth/unauthorized-domain": "Add this website domain in Firebase Authentication → Settings → Authorized domains."
-  };
-
-  return map[err.code] ||
-    ("Could not complete request: " + (err.message || err.code || "Unknown error"));
-}
-
-function getUserDoc() {
-  return db.collection("users")
-    .doc(currentUser.uid)
-    .collection("privateData")
-    .doc("physicsDashboard");
-}
-
-async function handleUser(user) {
-  currentUser = user;
-
-  if (!user) {
-    document.getElementById("app").classList.add("hidden");
-    document.getElementById("auth-screen").classList.remove("hidden");
-    dailyLogs = {};
-    return;
-  }
-
-  document.getElementById("auth-screen").classList.add("hidden");
-  document.getElementById("app").classList.remove("hidden");
-  document.getElementById("user-label").textContent =
-    "Signed in as " + (user.displayName || user.email || "your account");
-
-  setSyncStatus("Loading cloud data…", "text-amber-300");
-
-  try {
-    const snap = await getUserDoc().get();
-
-    dailyLogs =
-      snap.exists &&
-      snap.data().dailyLogs &&
-      typeof snap.data().dailyLogs === "object"
-        ? snap.data().dailyLogs
-        : {};
-
-    selectedCalendarDate = getTodayKey();
-    calendarDate = new Date();
-
-    setSyncStatus("Cloud synced");
-    render();
-  } catch (err) {
-    dailyLogs = {};
-    setSyncStatus("Cloud load failed", "text-red-300");
-
-    document.getElementById("view-container").innerHTML =
-      '<div class="bg-red-950/40 border border-red-800 rounded-xl p-5">' +
-      'Could not load your cloud data. Check your internet connection and Firestore security rules, then sign out and sign in again.' +
-      '<div class="text-xs mt-2 text-red-200">' +
-      escapeHtml(err.message || "") +
-      "</div></div>";
   }
 }
 
 async function signOutUser() {
   try {
     await firebase.auth().signOut();
-  } catch (e) {
-    alert(authError(e));
+  } catch(err) {
+    alert(authError(err));
   }
 }
 
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;"
-  }[c]));
+function getUserDoc() {
+  return db.collection("users").doc(currentUser.uid)
+    .collection("privateData").doc("physicsDashboard");
 }
 
-async function saveData() {
-  if (!currentUser || !db) {
-    throw new Error("You are signed out. Sign in again before saving.");
-  }
+function normalizeSettings(saved) {
+  const base=defaultSettings();
+  if(!saved || typeof saved!=="object")return base;
 
-  saving = true;
-  setSyncStatus("Saving…", "text-amber-300");
+  const track=TRACKS[saved.track]?saved.track:base.track;
+  const activitySource=Array.isArray(saved.activities)&&saved.activities.length
+    ? saved.activities
+    : base.activities;
 
-  try {
-    await getUserDoc().set({
-      dailyLogs: dailyLogs,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
+  const activities=activitySource.slice(0,12).map((a,i)=>({
+    id:String(a.id||("custom_"+i))
+      .replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,50),
+    name:String(a.name||"Activity").slice(0,60),
+    type:["hours","questions","count"].includes(a.type)?a.type:"count",
+    minutesPerUnit:Math.max(0,Number(a.minutesPerUnit)||0),
+    questionsPerHour:Math.max(1,Number(a.questionsPerHour)||15)
+  }));
 
-    setSyncStatus("Saved to cloud");
-  } catch (err) {
-    setSyncStatus("Save failed", "text-red-300");
-    throw err;
-  } finally {
-    saving = false;
-  }
-}
-
-// The study day changes at 3:00 AM local time.
-function getTodayKey(customDate = new Date()) {
-  const d = new Date(customDate);
-
-  if (d.getHours() < 3) {
-    d.setDate(d.getDate() - 1);
-  }
-
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function getMasterTotals() {
-  let l = 0, r = 0, j = 0;
-
-  chapters.forEach(c => {
-    l += c[1];
-    r += c[2];
-    j += c[3];
-  });
+  const savedChapters=Array.isArray(saved.chapters)?saved.chapters:[];
+  const normalizedChapters=base.chapters.map((c,i)=>({
+    name:String(savedChapters[i]?.name||c.name).slice(0,100),
+    targetHours:Math.max(
+      0,
+      Number.isFinite(Number(savedChapters[i]?.targetHours))
+        ? Number(savedChapters[i].targetHours)
+        : c.targetHours
+    )
+  }));
 
   return {
-    lectureTotal: l,
-    revisionTotal: r,
-    jeeTotal: j,
-    neetTotal: chapters.length,
-    totalPrepHours: l * 2 + r * (50 / 60) + j / 15 + chapters.length * 2
+    track,
+    activities:activities.length?activities:base.activities,
+    chapters:normalizedChapters
   };
 }
 
-function clamp(v, min, max) {
-  v = Number(v);
-  if (!Number.isFinite(v)) v = 0;
-  return Math.max(min, Math.min(v, max));
-}
+function normalizeLogs(value) {
+  if(!value || typeof value!=="object" || Array.isArray(value))return {};
+  const out={};
 
-function percentage(done, total) {
-  return total === 0 ? 0 : done / total * 100;
-}
+  Object.keys(value).forEach(date=>{
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+       !value[date] || typeof value[date]!=="object")return;
 
-function formatNumber(n) {
-  return Number(n).toLocaleString("en-IN", { maximumFractionDigits: 1 });
-}
+    out[date]={};
 
-function switchView(view) {
-  currentView = view;
+    Object.keys(value[date]).forEach(index=>{
+      const i=Number(index);
+      const entry=value[date][index];
 
-  ["net", "daily", "monthly"].forEach(v => {
-    const b = document.getElementById("tab-" + v);
-    b.className =
-      "px-4 py-2 rounded-xl font-bold text-sm " +
-      (v === view
-        ? "bg-emerald-500 text-slate-950"
-        : "bg-slate-800 text-slate-400 hover:text-white");
+      if(!Number.isInteger(i)||i<0||i>=chapters.length||
+         !entry||typeof entry!=="object")return;
+
+      const clean={};
+
+      Object.keys(entry).forEach(id=>{
+        const v=entry[id];
+        if(typeof v==="boolean") {
+          if(v)clean[id]=true;
+        } else if(Number.isFinite(Number(v))&&Number(v)>0) {
+          clean[id]=Number(v);
+        }
+      });
+
+      if(Object.keys(clean).length)out[date][i]=clean;
+    });
+
+    if(!Object.keys(out[date]).length)delete out[date];
   });
 
-  render();
+  return out;
+}
+
+async function handleUser(user) {
+  currentUser=user;
+
+  if(!user) {
+    document.getElementById("app").classList.add("hidden");
+    document.getElementById("auth-screen").classList.remove("hidden");
+    dailyLogs={};
+    settings=defaultSettings();
+    settingsLoaded=false;
+    return;
+  }
+
+  document.getElementById("auth-screen").classList.add("hidden");
+  document.getElementById("app").classList.remove("hidden");
+  document.getElementById("user-label").textContent=
+    "Signed in as "+(user.displayName||user.email||"your account");
+
+  setSyncStatus("Loading cloud data…","text-amber-300");
+
+  try {
+    const snap=await getUserDoc().get();
+    const saved=snap.exists?snap.data():{};
+
+    dailyLogs=normalizeLogs(saved.dailyLogs);
+    settings=normalizeSettings(saved.dashboardSettings);
+    settingsLoaded=true;
+
+    selectedCalendarDate=getTodayKey();
+    calendarDate=new Date();
+
+    setSyncStatus("Cloud synced");
+    render();
+  } catch(err) {
+    setSyncStatus("Cloud load failed","text-red-300");
+    document.getElementById("view-container").innerHTML=`
+      <div class="bg-red-950/40 border border-red-800 rounded-xl p-5">
+        Could not load your cloud data. Check your internet connection and
+        Firestore security rules, then try signing in again.
+        <div class="text-xs mt-2 text-red-200">
+          ${escapeHtml(err.message||"")}
+        </div>
+      </div>`;
+  }
+}
+
+async function saveData() {
+  if(!currentUser||!db)
+    throw new Error("You are signed out. Sign in again before saving.");
+
+  saving=true;
+  setSyncStatus("Saving…","text-amber-300");
+
+  try {
+    await getUserDoc().set({
+      dailyLogs,
+      dashboardSettings:settings,
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    },{merge:true});
+
+    setSyncStatus("Saved to cloud");
+  } catch(err) {
+    setSyncStatus("Save failed","text-red-300");
+    throw err;
+  } finally {
+    saving=false;
+  }
+}
+
+function queueSave() {
+  if(saveTimer)clearTimeout(saveTimer);
+  setSyncStatus("Changes pending…","text-amber-300");
+
+  saveTimer=setTimeout(async()=>{
+    try {
+      await saveData();
+    } catch(err) {
+      console.error(err);
+      setSyncStatus("Save failed — retry","text-red-300");
+    }
+  },500);
+}
+
+function saveImmediately() {
+  return saveData();
+}
+
+// Activity values in the legacy log remain compatible: lec, rev, jee, neet.
+function getActivityValue(entry,activity) {
+  const value=entry ? entry[activity.id] : 0;
+  return activity.type==="hours"
+    ? Math.max(0,Number(value)||0)
+    : (activity.id==="neet"
+        ? (value===true?1:Math.max(0,Number(value)||0))
+        : Math.max(0,Number(value)||0));
+}
+
+function activityHours(value,activity) {
+  value=Number(value)||0;
+  if(activity.type==="hours")return value;
+  if(activity.type==="questions")
+    return value/(Number(activity.questionsPerHour)||1);
+  return value*(Number(activity.minutesPerUnit)||0)/60;
+}
+
+function chapterHoursFromEntry(entry) {
+  return settings.activities.reduce(
+    (sum,a)=>sum+activityHours(getActivityValue(entry,a),a),0
+  );
+}
+
+function chapterTotals(index,{beforeToday=false,month=null}={}) {
+  const total={};
+  const today=getTodayKey();
+
+  Object.keys(dailyLogs).forEach(date=>{
+    if(beforeToday && date>=today)return;
+    if(month && !date.startsWith(month))return;
+
+    const entry=dailyLogs[date]?.[index];
+    if(!entry)return;
+
+    settings.activities.forEach(a=>{
+      total[a.id]=(total[a.id]||0)+getActivityValue(entry,a);
+    });
+  });
+
+  return total;
+}
+
+function getChapterHours(index,options={}) {
+  return Object.keys(dailyLogs).reduce((sum,date)=>{
+    if(options.beforeToday && date>=getTodayKey())return sum;
+    if(options.month && !date.startsWith(options.month))return sum;
+    return sum+chapterHoursFromEntry(dailyLogs[date]?.[index]);
+  },0);
+}
+
+function getVisibleChapterIndices() {
+  const t=TRACKS[settings.track]||TRACKS["NEET / Full Physics"];
+  return Array.from({length:t.end-t.start},(_,i)=>t.start+i);
+}
+
+function getActivityTarget(index,activity) {
+  const c=chapters[index];
+  if(activity.id==="lec")return c[1];
+  if(activity.id==="rev")return c[2];
+  if(activity.id==="jee")return c[3];
+  if(activity.id==="neet")return 1;
+  return 0;
+}
+
+function getTargetHours(index) {
+  return Math.max(0,Number(settings.chapters[index]?.targetHours)||0);
+}
+
+function getTodayEntry(index,date=selectedCalendarDate) {
+  return dailyLogs[date]?.[index]||{};
 }
 
 function render() {
-  if (!currentUser) return;
+  if(!currentUser)return;
 
-  const container = document.getElementById("view-container");
+  const container=document.getElementById("view-container");
 
-  container.innerHTML =
-    currentView === "net"
-      ? renderNetDashboard()
-      : currentView === "daily"
-        ? renderDailyDashboard()
-        : renderMonthlyDashboard();
+  if(currentView==="net")container.innerHTML=renderNetDashboard();
+  else if(currentView==="daily")container.innerHTML=renderDailyDashboard();
+  else if(currentView==="monthly")container.innerHTML=renderMonthlyDashboard();
+  else if(currentView==="settings")container.innerHTML=renderSettings();
+
+  ["net","daily","monthly","settings"].forEach(v=>{
+    const b=document.getElementById("tab-"+v);
+    if(!b)return;
+
+    b.className="px-4 py-2 rounded-xl font-bold text-sm "+
+      (v===currentView
+        ?"bg-emerald-500 text-slate-950"
+        :"bg-slate-800 text-slate-400 hover:text-white");
+  });
 }
 
-function getNetData() {
-  const todayKey = getTodayKey();
-
-  const data = chapters.map(() => ({
-    lec: 0,
-    rev: 0,
-    jee: 0,
-    neet: false
-  }));
-
-  Object.keys(dailyLogs).forEach(date => {
-    if (date < todayKey) {
-      Object.keys(dailyLogs[date] || {}).forEach(key => {
-        const i = Number(key);
-
-        if (!data[i] || !dailyLogs[date][key]) return;
-
-        const x = dailyLogs[date][key];
-        data[i].lec += Number(x.lec) || 0;
-        data[i].rev += Number(x.rev) || 0;
-        data[i].jee += Number(x.jee) || 0;
-
-        if (x.neet) data[i].neet = true;
-      });
-    }
-  });
-
-  return data;
+function switchView(view) {
+  if(!["net","daily","monthly","settings"].includes(view))return;
+  currentView=view;
+  render();
 }
 
 function renderNetDashboard() {
-  const data = getNetData();
+  const indices=getVisibleChapterIndices();
+  const totalTarget=indices.reduce((s,i)=>s+getTargetHours(i),0);
+  const completed=indices.reduce(
+    (s,i)=>s+getChapterHours(i,{beforeToday:true}),0
+  );
+  const pct=totalTarget?completed/totalTarget*100:0;
 
-  let ld = 0, lt = 0, rd = 0, rt = 0;
-  let jd = 0, jt = 0, nd = 0, nt = chapters.length;
+  const chapterRows=indices.map((i,local)=> {
+    const hours=getChapterHours(i,{beforeToday:true});
+    const target=getTargetHours(i);
+    const p=target?Math.min(100,hours/target*100):0;
+    const c=settings.chapters[i];
 
-  chapters.forEach((c, i) => {
-    ld += data[i].lec;
-    lt += c[1];
-    rd += data[i].rev;
-    rt += c[2];
-    jd += data[i].jee;
-    jt += c[3];
-    if (data[i].neet) nd++;
-  });
-
-  const total = (lt * 2) + (rt * 50 / 60) + (jt / 15) + (nt * 2);
-  const done = (ld * 2) + (rd * 50 / 60) + (jd / 15) + (nd * 2);
-  const pct = total ? done / total * 100 : 0;
-
-  const metrics = [
-    ["🎥 Lectures", percentage(ld, lt), `${ld}/${lt}`],
-    ["🔄 Revision", percentage(rd, rt), `${rd}/${rt}`],
-    ["🟣 JEE Main PYQs", percentage(jd, jt), `${formatNumber(jd)}/${formatNumber(jt)}`],
-    ["🟢 NEET PYQs", percentage(nd, nt), `${nd}/${nt} chapters`]
-  ];
-
-  const rows = chapters.map((c, i) => {
-    const d = data[i];
-
-    return `<tr class="hover:bg-slate-800/45">
-      <td class="p-3 text-center text-slate-500">${i + 1}</td>
-      <td class="p-3 font-medium">${c[0]}</td>
-      <td class="p-3 text-center">${d.lec} <span class="text-slate-500">/ ${c[1]}</span></td>
-      <td class="p-3 text-center">${d.rev} <span class="text-slate-500">/ ${c[2]}</span></td>
-      <td class="p-3 text-center">${formatNumber(d.jee)} <span class="text-slate-500">/ ${c[3]}</span></td>
-      <td class="p-3 text-center">
-        <span class="px-3 py-1 rounded-lg text-xs ${d.neet ? "bg-emerald-500/20 text-emerald-400" : "bg-slate-800 text-slate-400"}">
-          ${d.neet ? "✓ Done" : "Pending"}
-        </span>
+    return `<tr class="hover:bg-slate-800/45 border-t border-slate-800/70">
+      <td class="p-3 text-center text-slate-500">${local+1}</td>
+      <td class="p-3 font-medium">${escapeHtml(c.name)}</td>
+      <td class="p-3 whitespace-nowrap">${formatHours(hours)}</td>
+      <td class="p-3 whitespace-nowrap">${formatHours(target)}</td>
+      <td class="p-3 min-w-[150px]">
+        <div class="flex items-center gap-2">
+          <div class="h-2 bg-slate-800 rounded-full flex-1 overflow-hidden">
+            <div class="h-full bg-emerald-400" style="width:${p}%"></div>
+          </div>
+          <span class="text-xs w-10 text-right">${p.toFixed(0)}%</span>
+        </div>
       </td>
     </tr>`;
   }).join("");
 
+  const activityCards=settings.activities.map(a=>{
+    let done=0;
+    indices.forEach(i=>done+=chapterTotals(i,{beforeToday:true})[a.id]||0);
+
+    return `<div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+      <div class="text-xs text-slate-400 uppercase font-bold">${escapeHtml(a.name)}</div>
+      <div class="text-2xl font-black text-emerald-400 mt-2">${formatNumber(done)}</div>
+      <div class="text-xs text-slate-500 mt-1">${
+        a.type==="hours"?"hours":a.type==="questions"?"questions":"units logged"
+      }</div>
+    </div>`;
+  }).join("");
+
+  const doneChapters=indices.filter(
+    i=>getTargetHours(i)>0&&
+      getChapterHours(i,{beforeToday:true})>=getTargetHours(i)
+  ).length;
+
   return `
-  <div class="bg-gradient-to-r from-emerald-500/20 via-slate-900 to-sky-500/20 border border-emerald-500/30 rounded-2xl p-5 md:p-7">
-    <div class="flex flex-col md:flex-row md:justify-between gap-5">
-      <div>
-        <div class="text-sm uppercase tracking-widest font-bold text-emerald-400">🔥 TOTAL PREPARATION</div>
-        <div class="text-5xl md:text-6xl font-black mt-2">${pct.toFixed(1)}%</div>
-        <div class="text-slate-400 mt-2">${done.toFixed(1)} hours completed / ${total.toFixed(1)} hours total</div>
-      </div>
-      <div class="md:w-1/2">
-        <div class="flex justify-between text-sm mb-2">
-          <span class="text-slate-400">Overall Progress</span>
-          <b class="text-emerald-400">${pct.toFixed(1)}%</b>
+    <div class="bg-gradient-to-r from-emerald-500/20 via-slate-900 to-sky-500/20 border border-emerald-500/30 rounded-2xl p-5 md:p-7">
+      <div class="flex flex-col md:flex-row md:justify-between gap-5">
+        <div>
+          <div class="text-sm uppercase tracking-widest font-bold text-emerald-400">
+            OVERALL PREPARATION · ${escapeHtml(settings.track)}
+          </div>
+          <div class="text-5xl md:text-6xl font-black mt-2">${pct.toFixed(1)}%</div>
+          <div class="text-slate-400 mt-2">
+            ${completed.toFixed(1)} study-equivalent hours / ${totalTarget.toFixed(1)} target hours
+          </div>
         </div>
-        <div class="h-5 bg-slate-800 rounded-full overflow-hidden">
-          <div class="h-full bg-emerald-400" style="width:${Math.min(100, pct)}%"></div>
-        </div>
-        <div class="text-xs text-slate-500 mt-2">${(total - done).toFixed(1)} hours remaining</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-    ${metrics.map(m => `
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-        <div class="text-xs text-slate-400 uppercase font-bold">${m[0]}</div>
-        <div class="text-2xl font-black text-emerald-400 mt-1">${m[1].toFixed(1)}%</div>
-        <div class="text-xs text-slate-400 mt-1">${m[2]}</div>
-        <div class="h-2 bg-slate-800 rounded-full mt-3 overflow-hidden">
-          <div class="h-full bg-emerald-400" style="width:${Math.min(100, m[1])}%"></div>
+        <div class="md:w-1/2">
+          <div class="flex justify-between text-sm mb-2">
+            <span class="text-slate-400">Progress before today's study day</span>
+            <b class="text-emerald-400">${pct.toFixed(1)}%</b>
+          </div>
+          <div class="h-5 bg-slate-800 rounded-full overflow-hidden">
+            <div class="h-full bg-emerald-400" style="width:${Math.min(100,pct)}%"></div>
+          </div>
+          <div class="text-xs text-slate-500 mt-2">
+            ${Math.max(0,totalTarget-completed).toFixed(1)} target hours remaining ·
+            ${doneChapters}/${indices.length} chapters at target
+          </div>
         </div>
       </div>
-    `).join("")}
-  </div>
-
-  <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
-    <div class="p-5 border-b border-slate-800">
-      <h2 class="font-bold text-lg text-emerald-400">📚 Master Chapter Progress (Net Dashboard)</h2>
-      <p class="text-xs text-slate-500 mt-1">Cumulative progress includes dates before the 3:00 AM cutoff. Enter progress only in Daily Dashboard.</p>
     </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-left text-sm">
-        <thead>
-          <tr class="bg-slate-800/60 text-slate-300 uppercase text-xs">
-            <th class="p-3 text-center">#</th>
-            <th class="p-3">Chapter</th>
-            <th class="p-3 text-center">Lectures</th>
-            <th class="p-3 text-center">Revision</th>
-            <th class="p-3 text-center">JEE PYQs</th>
-            <th class="p-3 text-center">NEET PYQs</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-800/60">${rows}</tbody>
-      </table>
-    </div>
-  </div>`;
-}
-
-function changeMonth(n) {
-  calendarDate.setMonth(calendarDate.getMonth() + n);
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">${activityCards}</div>
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+      <div class="p-5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="font-bold text-lg text-emerald-400">📚 Chapter progress</h2>
+          <p class="text-xs text-slate-500 mt-1">
+            Progress is calculated from your logged activities and editable target hours.
+          </p>
+        </div>
+        <button onclick="switchView('settings')" class="bg-slate-800 hover:bg-slate-700 px-3 py-2 rounded-xl text-sm font-bold">Customize</button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm min-w-[650px]">
+          <thead><tr class="bg-slate-800/60 text-slate-300 uppercase text-xs">
+            <th class="p-3 text-center">#</th><th class="p-3">Chapter</th>
+            <th class="p-3">Completed</th><th class="p-3">Target</th>
+            <th class="p-3">Progress</th>
+          </tr></thead>
+          <tbody>${chapterRows}</tbody>
+        </table>
+      </div>
+    </div>`;
+  } function changeMonth(n) {
+  calendarDate.setMonth(calendarDate.getMonth()+n);
   render();
 }
 
-function selectDay(s) {
-  selectedCalendarDate = s;
+function selectDay(date) {
+  selectedCalendarDate=date;
   render();
 }
 
 function renderDailyDashboard() {
-  const totals = getMasterTotals();
-  const y = calendarDate.getFullYear();
-  const m = calendarDate.getMonth();
+  const y=calendarDate.getFullYear(),m=calendarDate.getMonth();
+  const monthName=calendarDate.toLocaleDateString(undefined,{month:"long",year:"numeric"});
+  const today=getTodayKey();
+  const names=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  let cells="";
 
-  const names = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
-  ];
+  for(let i=0;i<new Date(y,m,1).getDay();i++)
+    cells+='<div class="min-h-[76px] rounded-xl bg-slate-950/40"></div>';
 
-  const dow = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  let cells = "";
+  for(let day=1;day<=new Date(y,m+1,0).getDate();day++){
+    const key=`${y}-${String(m+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+    const selected=key===selectedCalendarDate;
+    const isToday=key===today;
+    const entries=Object.values(dailyLogs[key]||{});
+    const hrs=entries.reduce((s,e)=>s+chapterHoursFromEntry(e),0);
 
-  for (let i = 0; i < new Date(y, m, 1).getDay(); i++) {
-    cells += '<div class="min-h-[80px] rounded-xl bg-slate-950/40"></div>';
+    cells+=`<button ${key>today?'disabled':''} onclick="selectDay('${key}')" class="text-left bg-slate-950 border ${selected?"border-emerald-400 ring-2 ring-emerald-400/30":isToday?"border-sky-500/60":"border-slate-800"} rounded-xl p-2 min-h-[76px] hover:border-emerald-400">
+      <span class="text-xs font-bold ${isToday?"text-sky-400":"text-slate-400"}">${day}</span>
+      <div class="mt-2 text-[11px] ${hrs?"text-emerald-400":"text-slate-600"}">${hrs?hrs.toFixed(1)+" h":"-"}</div>
+    </button>`;
   }
 
-  for (let day = 1; day <= new Date(y, m + 1, 0).getDate(); day++) {
-    const key = `${y}-${String(m + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    const logs = dailyLogs[key] || {};
-    const selected = key === selectedCalendarDate;
-    const today = key === getTodayKey();
+  const entries=dailyLogs[selectedCalendarDate]||{};
+  const isPast=selectedCalendarDate<today;
+  const isFuture=selectedCalendarDate>today;
+  const indices=getVisibleChapterIndices();
 
-    let hrs = 0;
-    Object.values(logs).forEach(l => {
-      hrs += (Number(l.lec) || 0) * 2
-        + (Number(l.rev) || 0) * 50 / 60
-        + (Number(l.jee) || 0) / 15
-        + (l.neet ? 2 : 0);
-    });
+  const chapterOptions=indices.map(i=>
+    `<option value="${i}">${i+1}. ${escapeHtml(settings.chapters[i].name)}</option>`
+  ).join("");
 
-    cells += `
-      <button onclick="selectDay('${key}')" class="text-left bg-slate-950 border ${selected ? "border-emerald-400 ring-2 ring-emerald-400/30" : today ? "border-sky-500/60" : "border-slate-800"} rounded-xl p-2 min-h-[80px] hover:border-emerald-400">
-        <span class="text-xs font-bold ${today ? "text-sky-400" : "text-slate-400"}">${day}</span>
-        <div class="mt-3 text-[11px] ${hrs ? "text-emerald-400" : "text-slate-600"}">${hrs ? "+" + (hrs / totals.totalPrepHours * 100).toFixed(2) + "%" : "-"}</div>
-        <div class="text-[10px] text-slate-500">${hrs ? hrs.toFixed(1) + " hrs" : ""}</div>
-      </button>`;
-  }
+  const logged=Object.keys(entries).map(k=>{
+    const i=Number(k),entry=entries[k];
+    if(!Number.isInteger(i)||!chapters[i])return "";
 
-  const logs = dailyLogs[selectedCalendarDate] || {};
-  const locked = selectedCalendarDate < getTodayKey();
-  const opts = chapters.map((c, i) => `<option value="${i}">${i + 1}. ${c[0]}</option>`).join("");
+    const pills=settings.activities.map(a=>
+      `<span>${escapeHtml(a.name)}: <b class="text-white">${formatNumber(getActivityValue(entry,a))}</b></span>`
+    ).join("");
 
-  const entries = Object.keys(logs).map(k => {
-    const i = Number(k);
-    const l = logs[k];
-
-    return `
-      <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col md:flex-row md:justify-between gap-3">
-        <div>
-          <b>${i + 1}. ${chapters[i][0]}</b>
-          <div class="flex flex-wrap gap-2 text-xs text-slate-400 mt-2">
-            <span>Lectures: <b class="text-white">${l.lec || 0}</b></span>
-            <span>Revision: <b class="text-white">${l.rev || 0}</b></span>
-            <span>JEE PYQs: <b class="text-white">${formatNumber(l.jee || 0)}</b></span>
-            <span>NEET: <b class="${l.neet ? "text-emerald-400" : "text-slate-400"}">${l.neet ? "Done" : "Pending"}</b></span>
-          </div>
-        </div>
-        ${!locked ? `<button onclick="removeChapterLog(${i})" class="self-start bg-red-500/20 text-red-300 px-3 py-2 rounded-lg text-xs font-bold">Remove</button>` : ""}
-      </div>`;
+    return `<div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col md:flex-row md:justify-between gap-3">
+      <div>
+        <b>${i+1}. ${escapeHtml(settings.chapters[i].name)}</b>
+        <div class="flex flex-wrap gap-3 text-xs text-slate-400 mt-2">${pills}</div>
+        <div class="text-xs text-emerald-300 mt-2">Equivalent: ${formatHours(chapterHoursFromEntry(entry))}</div>
+      </div>
+      ${!isPast&&!isFuture?`<button onclick="removeChapterLog(${i})" class="self-start bg-red-500/20 text-red-300 px-3 py-2 rounded-lg text-xs font-bold">Remove</button>`:""}
+    </div>`;
   }).join("");
 
+  const activityInputs=settings.activities.map(a=>
+    `<div>
+      <label class="block text-xs text-slate-400 mb-1">
+        ${escapeHtml(a.name)}${a.type==="hours"?" (hours)":a.type==="questions"?" (questions)":" (units)"}
+      </label>
+      <input type="number" id="activity_${escapeHtml(a.id)}" min="0"
+        step="${a.type==="hours"?"0.25":"1"}" value="0"
+        class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3">
+    </div>`
+  ).join("");
+
   return `
-  <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col md:flex-row md:justify-between gap-4">
-    <div>
-      <h2 class="text-lg font-bold text-emerald-400">📅 Daily Dashboard & Input Hub</h2>
-      <p class="text-xs text-slate-500 mt-1">Add progress here. Your other dashboards update automatically.</p>
-    </div>
-    <div class="flex items-center gap-3">
-      <button onclick="changeMonth(-1)" class="text-emerald-400 font-bold px-2">←</button>
-      <b>${names[m]} ${y}</b>
-      <button onclick="changeMonth(1)" class="text-emerald-400 font-bold px-2">→</button>
-    </div>
-  </div>
-
-  <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-6">
-    <div class="grid grid-cols-7 gap-2 text-center mb-3">
-      ${dow.map(d => `<div class="text-xs font-bold text-slate-500">${d}</div>`).join("")}
-    </div>
-    <div class="grid grid-cols-7 gap-2">${cells}</div>
-  </div>
-
-  <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-5">
-    <div>
-      <h2 class="font-bold text-lg text-emerald-400">✍️ Log Work: ${selectedCalendarDate}</h2>
-      <p class="text-xs text-slate-500 mt-1">${locked ? "🔒 This day is locked after the 3:00 AM cutoff." : "Choose a chapter and enter the work completed."}</p>
-    </div>
-
-    ${!locked ? `
-    <form onsubmit="saveChapterLogForActiveDate(event)" class="space-y-4 bg-slate-950 p-4 md:p-5 rounded-xl border border-slate-800">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col md:flex-row md:justify-between gap-4">
       <div>
-        <label class="block text-xs uppercase font-bold text-slate-400 mb-2">Select chapter</label>
-        <select id="select-chapter" required class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3">
-          <option value="">-- Choose chapter --</option>
-          ${opts}
-        </select>
+        <h2 class="text-lg font-bold text-emerald-400">📅 Daily Dashboard & Input Hub</h2>
+        <p class="text-xs text-slate-500 mt-1">Choose a date and log completed work. Past study days are read-only.</p>
       </div>
-
-      <div class="grid sm:grid-cols-3 gap-4">
-        <div>
-          <label class="block text-xs text-slate-400 mb-1">Lectures today</label>
-          <input type="number" id="input-lec" min="0" step="1" value="0" required class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3">
-        </div>
-        <div>
-          <label class="block text-xs text-slate-400 mb-1">Revision today</label>
-          <input type="number" id="input-rev" min="0" step="1" value="0" required class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3">
-        </div>
-        <div>
-          <label class="block text-xs text-slate-400 mb-1">JEE PYQs today</label>
-          <input type="number" id="input-jee" min="0" step="1" value="0" required class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3">
-        </div>
+      <div class="flex items-center gap-3">
+        <button onclick="changeMonth(-1)" class="text-emerald-400 font-bold px-2">←</button>
+        <b>${monthName}</b>
+        <button onclick="changeMonth(1)" class="text-emerald-400 font-bold px-2">→</button>
       </div>
-
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <label class="flex items-center gap-2 text-sm">
-          <input type="checkbox" id="input-neet" class="accent-emerald-500">
-          NEET PYQ chapter completed
-        </label>
-        <button id="save-log-btn" type="submit" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-5 py-3 rounded-xl">Save Chapter Log</button>
-      </div>
-    </form>
-    ` : ""}
-
-    <div class="space-y-3">
-      <h3 class="text-sm font-bold uppercase text-slate-400">Chapters logged on this date</h3>
-      ${entries || '<div class="text-slate-500 text-sm bg-slate-950 p-4 rounded-xl border border-slate-800">No chapters logged for this date yet.</div>'}
     </div>
-  </div>`;
+
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 md:p-6">
+      <div class="grid grid-cols-7 gap-2 text-center mb-3">
+        ${names.map(n=>`<div class="text-xs font-bold text-slate-500">${n}</div>`).join("")}
+      </div>
+      <div class="grid grid-cols-7 gap-2">${cells}</div>
+      <p class="text-xs text-slate-500 mt-3">
+        The study day changes at 3:00 AM local time. Only today and earlier dates are shown; past days cannot be edited.
+      </p>
+    </div>
+
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-5">
+      <div>
+        <h2 class="font-bold text-lg text-emerald-400">✍️ Log work: ${displayDate(selectedCalendarDate)}</h2>
+        <p class="text-xs text-slate-500 mt-1">
+          ${isPast?"🔒 This study day is locked.":isFuture?"Future dates cannot be edited.":"Select a chapter and enter today's work."}
+        </p>
+      </div>
+
+      ${!isPast&&!isFuture?`
+        <form onsubmit="saveChapterLog(event)" class="space-y-4 bg-slate-950 p-4 md:p-5 rounded-xl border border-slate-800">
+          <div>
+            <label class="block text-xs uppercase font-bold text-slate-400 mb-2">Select chapter</label>
+            <select id="select-chapter" required class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3">
+              <option value="">-- Choose chapter --</option>${chapterOptions}
+            </select>
+          </div>
+          <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">${activityInputs}</div>
+          <button id="save-log-btn" type="submit" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-5 py-3 rounded-xl">Save chapter log</button>
+        </form>`:""}
+
+      <div class="space-y-3">
+        <h3 class="text-sm font-bold uppercase text-slate-400">Chapters logged on this date</h3>
+        ${logged||'<div class="text-slate-500 text-sm bg-slate-950 p-4 rounded-xl border border-slate-800">No chapters logged for this date yet.</div>'}
+      </div>
+    </div>`;
 }
 
-async function saveChapterLogForActiveDate(e) {
+async function saveChapterLog(e) {
   e.preventDefault();
-  if (saving) return;
+  if(saving)return;
 
-  const date = selectedCalendarDate;
-
-  if (date < getTodayKey()) {
-    alert("This day is locked past the 3:00 AM cutoff.");
+  if(selectedCalendarDate!==getTodayKey()){
+    alert("Only the current study day can be edited.");
     return;
   }
 
-  const field = document.getElementById("select-chapter");
-  const idx = field.value;
+  const idx=Number(document.getElementById("select-chapter").value);
 
-  if (idx === "") {
-    alert("Please select a chapter.");
+  if(!Number.isInteger(idx)||!getVisibleChapterIndices().includes(idx)){
+    alert("Please select a valid chapter.");
     return;
   }
 
-  const old = JSON.parse(JSON.stringify(dailyLogs));
+  const entry={...(dailyLogs[selectedCalendarDate]?.[idx]||{})};
 
-  const lec = clamp(document.getElementById("input-lec").value, 0, chapters[idx][1]);
-  const rev = clamp(document.getElementById("input-rev").value, 0, chapters[idx][2]);
-  const jee = clamp(document.getElementById("input-jee").value, 0, chapters[idx][3]);
-  const neet = document.getElementById("input-neet").checked;
+  settings.activities.forEach(a=>{
+    let v=Number(document.getElementById("activity_"+a.id)?.value)||0;
+    if(a.type==="hours")v=Math.max(0,v);
+    else v=Math.max(0,Math.floor(v));
 
-  if (!dailyLogs[date]) dailyLogs[date] = {};
+    if(v===0)delete entry[a.id];
+    else entry[a.id]=v;
+  });
 
-  if (!lec && !rev && !jee && !neet) {
-    delete dailyLogs[date][idx];
-    if (!Object.keys(dailyLogs[date]).length) delete dailyLogs[date];
-  } else {
-    dailyLogs[date][idx] = { lec, rev, jee, neet };
-  }
+  // Keep legacy NEET checkbox values compatible with the old dashboard.
+  if(entry.neet===1)entry.neet=true;
 
-  document.getElementById("save-log-btn").disabled = true;
+  const old=JSON.parse(JSON.stringify(dailyLogs));
+
+  if(!dailyLogs[selectedCalendarDate])
+    dailyLogs[selectedCalendarDate]={};
+
+  if(Object.keys(entry).length)
+    dailyLogs[selectedCalendarDate][idx]=entry;
+  else
+    delete dailyLogs[selectedCalendarDate][idx];
+
+  if(!Object.keys(dailyLogs[selectedCalendarDate]).length)
+    delete dailyLogs[selectedCalendarDate];
+
+  const btn=document.getElementById("save-log-btn");
+  if(btn)btn.disabled=true;
 
   try {
     await saveData();
     render();
-  } catch (err) {
-    dailyLogs = old;
+  } catch(err) {
+    dailyLogs=old;
     render();
-    alert("Cloud save failed. Your change was not saved. Check internet/Firebase rules and try again.\n" + (err.message || ""));
+    alert("Cloud save failed. Your change was rolled back. Check your connection and Firebase rules.\n"+(err.message||""));
   } finally {
-    const b = document.getElementById("save-log-btn");
-    if (b) b.disabled = false;
+    const b=document.getElementById("save-log-btn");
+    if(b)b.disabled=false;
   }
 }
 
 async function removeChapterLog(idx) {
-  if (saving) return;
+  if(saving)return;
 
-  const date = selectedCalendarDate;
-
-  if (date < getTodayKey()) {
-    alert("This day is locked past the 3:00 AM cutoff.");
+  if(selectedCalendarDate!==getTodayKey()){
+    alert("Only today's study log can be changed.");
     return;
   }
 
-  const old = JSON.parse(JSON.stringify(dailyLogs));
+  if(!confirm("Remove this chapter's log for today?"))return;
 
-  if (dailyLogs[date]) {
-    delete dailyLogs[date][idx];
-    if (!Object.keys(dailyLogs[date]).length) delete dailyLogs[date];
+  const old=JSON.parse(JSON.stringify(dailyLogs));
+
+  if(dailyLogs[selectedCalendarDate]) {
+    delete dailyLogs[selectedCalendarDate][idx];
+    if(!Object.keys(dailyLogs[selectedCalendarDate]).length)
+      delete dailyLogs[selectedCalendarDate];
   }
 
   try {
     await saveData();
     render();
-  } catch (err) {
-    dailyLogs = old;
+  } catch(err) {
+    dailyLogs=old;
     render();
-    alert("Could not save removal to cloud. Nothing was changed remotely. Check your connection and try again.");
+    alert("Could not save removal. Your local change was rolled back.");
   }
 }
 
 function renderMonthlyDashboard() {
-  const map = {};
-  const totals = getMasterTotals();
+  const months={};
 
-  Object.keys(dailyLogs).forEach(date => {
-    const month = date.slice(0, 7);
-    if (!map[month]) map[month] = { lec: 0, rev: 0, jee: 0, neet: 0 };
+  Object.keys(dailyLogs).forEach(date=>{
+    const key=date.slice(0,7);
 
-    Object.values(dailyLogs[date] || {}).forEach(l => {
-      map[month].lec += Number(l.lec) || 0;
-      map[month].rev += Number(l.rev) || 0;
-      map[month].jee += Number(l.jee) || 0;
-      if (l.neet) map[month].neet++;
+    if(!months[key])
+      months[key]={hours:0,days:new Set(),activities:{}};
+
+    months[key].days.add(date);
+
+    Object.values(dailyLogs[date]||{}).forEach(entry=>{
+      months[key].hours+=chapterHoursFromEntry(entry);
+
+      settings.activities.forEach(a=>{
+        months[key].activities[a.id]=
+          (months[key].activities[a.id]||0)+getActivityValue(entry,a);
+      });
     });
   });
 
-  const months = Object.keys(map).sort().reverse();
+  const keys=Object.keys(months).sort().reverse();
 
-  if (!months.length) {
-    return `
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center">
-        <h2 class="text-xl font-bold text-emerald-400">No Monthly Activity Logged Yet</h2>
-        <p class="text-slate-400 text-sm mt-2">Add entries in Daily Dashboard to see your summary.</p>
-      </div>`;
-  }
+  if(!keys.length)
+    return `<div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center">
+      <h2 class="text-xl font-bold text-emerald-400">No monthly activity logged yet</h2>
+      <p class="text-slate-400 text-sm mt-2">Add entries in Daily Dashboard to see your summary.</p>
+    </div>`;
 
   return `
-  <div class="space-y-4">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
       <h2 class="text-lg font-bold text-emerald-400">🗓️ Monthly Summary</h2>
-      <p class="text-xs text-slate-500 mt-1">Read-only summary of your daily logs.</p>
+      <p class="text-xs text-slate-500 mt-1">Monthly totals are calculated from your saved daily logs.</p>
     </div>
-
     <div class="grid md:grid-cols-2 gap-4">
-      ${months.map(m => {
-        const s = map[m];
-        const hours = s.lec * 2 + s.rev * 50 / 60 + s.jee / 15 + s.neet * 2;
-        const pct = hours / totals.totalPrepHours * 100;
+      ${keys.map(key=>{
+        const s=months[key];
+        const label=new Date(key+"-15T12:00:00").toLocaleDateString(
+          undefined,{month:"long",year:"numeric"}
+        );
 
-        return `
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+        return `<div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
           <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-            <span class="font-bold text-emerald-400 text-lg">${m}</span>
-            <span class="text-xs font-semibold px-2.5 py-1 bg-emerald-500/20 text-emerald-400 rounded-full">+${pct.toFixed(2)}%</span>
+            <span class="font-bold text-emerald-400 text-lg">${label}</span>
+            <span class="text-xs text-slate-400">${s.days.size} active days</span>
           </div>
-
+          <div class="text-3xl font-black">${s.hours.toFixed(1)}
+            <span class="text-sm font-normal text-slate-400">equivalent hours</span>
+          </div>
           <div class="grid grid-cols-2 gap-3 text-sm">
-            <div class="bg-slate-950 p-3 rounded-xl">
-              <div class="text-xs text-slate-500">Lectures</div>
-              <div class="text-lg font-bold">${s.lec}</div>
-            </div>
-            <div class="bg-slate-950 p-3 rounded-xl">
-              <div class="text-xs text-slate-500">Revisions</div>
-              <div class="text-lg font-bold">${s.rev}</div>
-            </div>
-            <div class="bg-slate-950 p-3 rounded-xl">
-              <div class="text-xs text-slate-500">JEE PYQs</div>
-              <div class="text-lg font-bold">${formatNumber(s.jee)}</div>
-            </div>
-            <div class="bg-slate-950 p-3 rounded-xl">
-              <div class="text-xs text-slate-500">NEET chapters</div>
-              <div class="text-lg font-bold">${s.neet}</div>
-            </div>
+            ${settings.activities.map(a=>`
+              <div class="bg-slate-950 p-3 rounded-xl">
+                <div class="text-xs text-slate-500">${escapeHtml(a.name)}</div>
+                <div class="text-lg font-bold">${formatNumber(s.activities[a.id]||0)}</div>
+              </div>`).join("")}
           </div>
         </div>`;
       }).join("")}
-    </div>
+    </div>`;
+}
+
+function renderSettings() {
+  const activityHtml=settings.activities.map((a,i)=>`
+    <div class="border border-slate-800 bg-slate-950 rounded-xl p-4 space-y-3">
+      <div class="flex justify-between items-center">
+        <b>Activity ${i+1}</b>
+        <button type="button" onclick="removeActivity('${escapeHtml(a.id)}')" class="text-sm text-red-300 hover:text-red-200">Remove</button>
+      </div>
+
+      <label class="block text-xs text-slate-400">
+        Column name
+        <input id="activity-name-${escapeHtml(a.id)}" maxlength="60" value="${escapeHtml(a.name)}" class="block w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm">
+      </label>
+
+      <label class="block text-xs text-slate-400">
+        Value type
+        <select id="activity-type-${escapeHtml(a.id)}" onchange="toggleActivitySetting('${escapeHtml(a.id)}')" class="block w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm">
+          <option value="count" ${a.type==="count"?"selected":""}>Count / units</option>
+          <option value="questions" ${a.type==="questions"?"selected":""}>Questions</option>
+          <option value="hours" ${a.type==="hours"?"selected":""}>Hours</option>
+        </select>
+      </label>
+
+      <div id="activity-conversion-${escapeHtml(a.id)}" class="${a.type==="hours"?"hidden":""} grid sm:grid-cols-2 gap-3">
+        <label class="block text-xs text-slate-400 ${a.type==="count"?"":"hidden"}" id="minutes-label-${escapeHtml(a.id)}">
+          Minutes per unit
+          <input id="activity-minutes-${escapeHtml(a.id)}" type="number" min="0" step="1" value="${a.minutesPerUnit}" class="block w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm">
+        </label>
+
+        <label class="block text-xs text-slate-400 ${a.type==="questions"?"":"hidden"}" id="rate-label-${escapeHtml(a.id)}">
+          Questions equivalent to one hour
+          <input id="activity-rate-${escapeHtml(a.id)}" type="number" min="1" step="1" value="${a.questionsPerHour}" class="block w-full mt-1 bg-slate-900 border border-slate-700 rounded-xl p-3 text-sm">
+        </label>
+      </div>
+
+      <p class="text-xs text-slate-500">This activity's conversion is used to calculate equivalent study hours.</p>
+    </div>`).join("");
+
+  const chapterHtml=getVisibleChapterIndices().map(i=>`
+    <div class="grid grid-cols-1 sm:grid-cols-[1fr_150px] gap-3 py-3 border-b border-slate-800">
+      <label class="block text-xs text-slate-400">
+        Chapter name
+        <input id="chapter-name-${i}" maxlength="100" value="${escapeHtml(settings.chapters[i].name)}" class="block w-full mt-1 bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm">
+      </label>
+      <label class="block text-xs text-slate-400">
+        Target hours
+        <input id="chapter-target-${i}" type="number" min="0" step="0.5" value="${settings.chapters[i].targetHours}" class="block w-full mt-1 bg-slate-950 border border-slate-700 rounded-xl p-3 text-sm">
+      </label>
+    </div>`).join("");
+
+  return `<div class="space-y-5">
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+      <h2 class="text-xl font-bold text-emerald-400">⚙️ Customize your dashboard</h2>
+      <p class="text-sm text-slate-400 mt-1">Your preferences are saved in your existing Firebase account document.</p>
+
+      <label class="block mt-5 text-sm font-bold">
+        Study track
+        <select id="track-select" onchange="changeTrack(this.value)" class="block w-full mt-2 bg-slate-950 border border-slate-700 rounded-xl p-3">
+          ${Object.keys(TRACKS).map(t=>`<option value="${escapeHtml(t)}" ${settings.track===t?"selected":""}>${escapeHtml(t)}</option>`).join("")}
+        </select>
+      </label>
+
+      <p class="text-xs text-slate-500 mt-2">Changing the track changes which chapters are displayed. The original 30 chapter indices and daily logs are retained.</p>
+    </section>
+
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-bold">Activity columns</h2>
+          <p class="text-sm text-slate-400 mt-1">Rename existing columns or add your own. Removing a column hides its values from calculations but does not erase old log fields.</p>
+        </div>
+        <button onclick="addActivity()" class="bg-emerald-500 text-slate-950 rounded-xl px-4 py-2 font-bold text-sm">+ Add activity</button>
+      </div>
+
+      <div class="space-y-4 mt-4">${activityHtml}</div>
+      <button onclick="saveActivitySettings()" class="mt-5 bg-emerald-500 text-slate-950 rounded-xl px-5 py-3 font-bold">Save activity settings</button>
+    </section>
+
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+      <h2 class="text-lg font-bold">Chapter names and targets</h2>
+      <p class="text-sm text-slate-400 mt-1">Change names and the target number of study-equivalent hours.</p>
+      <div class="mt-3">${chapterHtml}</div>
+      <button onclick="saveChapterSettings()" class="mt-5 bg-emerald-500 text-slate-950 rounded-xl px-5 py-3 font-bold">Save chapter settings</button>
+    </section>
+
+    <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+      <h2 class="font-bold">Cloud data</h2>
+      <p class="text-sm text-slate-400 mt-1">This dashboard uses the existing Firebase project and the same per-user document path as your original dashboard.</p>
+      <button onclick="manualSave()" class="mt-4 bg-slate-800 hover:bg-slate-700 rounded-xl px-4 py-2 font-bold">Save all changes now</button>
+    </section>
   </div>`;
 }
 
-if (FIREBASE_CONFIG_READY) {
-  firebase.initializeApp(firebaseConfig);
-  db = firebase.firestore();
+function toggleActivitySetting(id) {
+  const type=document.getElementById("activity-type-"+id)?.value;
+  const conv=document.getElementById("activity-conversion-"+id);
+  const min=document.getElementById("minutes-label-"+id);
+  const rate=document.getElementById("rate-label-"+id);
 
-  firebase.auth().onAuthStateChanged(user => {
-    handleUser(user).catch(err => {
-      console.error(err);
-      setSyncStatus("Could not load data", "text-red-300");
-    });
-  });
-} else {
-  setAuthMessage("Setup needed: create a Firebase project and paste its Web App config into this file.");
+  if(conv)conv.classList.toggle("hidden",type==="hours");
+  if(min)min.classList.toggle("hidden",type!=="count");
+  if(rate)rate.classList.toggle("hidden",type!=="questions");
 }
+
+function addActivity() {
+  if(settings.activities.length>=12) {
+    alert("You can have up to 12 activity columns.");
+    return;
+  }
+
+  let id="custom_"+Date.now().toString(36);
+  while(settings.activities.some(a=>a.id===id))id+="_x";
+
+  settings.activities.push({
+    id,
+    name:"New activity",
+    type:"count",
+    minutesPerUnit:0,
+    questionsPerHour:15
+  });
+
+  render();
+}
+
+function removeActivity(id) {
+  if(settings.activities.length<=1) {
+    alert("Keep at least one activity.");
+    return;
+  }
+
+  if(!confirm("Remove this activity from the dashboard? Existing log values are not deleted."))return;
+
+  settings.activities=settings.activities.filter(a=>a.id!==id);
+  render();
+  queueSave();
+}
+
+async function saveActivitySettings() {
+  const updated=[];
+
+  for(const a of settings.activities) {
+    const name=document.getElementById("activity-name-"+a.id)?.value.trim();
+    const type=document.getElementById("activity-type-"+a.id)?.value;
+    const minutesPerUnit=Number(document.getElementById("activity-minutes-"+a.id)?.value)||0;
+    const questionsPerHour=Number(document.getElementById("activity-rate-"+a.id)?.value)||15;
+
+    if(!name) {
+      alert("Every activity needs a name.");
+      return;
+    }
+
+    if(!["count","questions","hours"].includes(type)) {
+      alert("Choose a valid activity type.");
+      return;
+    }
+
+    if(minutesPerUnit<0||questionsPerHour<=0) {
+      alert("Please enter valid conversion values.");
+      return;
+    }
+
+    updated.push({...a,name,type,minutesPerUnit,questionsPerHour});
+  }
+
+  settings.activities=updated;
+
+  try {
+    await saveData();
+    render();
+    alert("Activity settings saved.");
+  } catch(err) {
+    alert("Could not save settings: "+(err.message||"Check your connection."));
+  }
+}
+
+async function saveChapterSettings() {
+  const next=settings.chapters.map(c=>({...c}));
+
+  for(const i of getVisibleChapterIndices()) {
+    const name=document.getElementById("chapter-name-"+i)?.value.trim();
+    const target=Number(document.getElementById("chapter-target-"+i)?.value);
+
+    if(!name) {
+      alert("Every chapter needs a name.");
+      return;
+    }
+
+    if(!Number.isFinite(target)||target<0) {
+      alert("Target hours must be zero or greater.");
+      return;
+    }
+
+    next[i]={name,targetHours:target};
+  }
+
+  settings.chapters=next;
+
+  try {
+    await saveData();
+    render();
+    alert("Chapter settings saved.");
+  } catch(err) {
+    alert("Could not save settings: "+(err.message||"Check your connection."));
+  }
+}
+
+async function changeTrack(track) {
+  if(!TRACKS[track])return;
+
+  settings.track=track;
+  render();
+
+  try {
+    await saveData();
+  } catch(err) {
+    alert("Track changed locally, but cloud save failed: "+(err.message||""));
+  }
+}
+
+async function manualSave() {
+  try {
+    await saveData();
+    alert("Your dashboard data and settings are saved to Firebase.");
+  } catch(err) {
+    alert("Save failed: "+(err.message||"Check your internet connection and Firebase rules."));
+  }
+}
+
+if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+db=firebase.firestore();
+
+firebase.auth().onAuthStateChanged(user=>{
+  handleUser(user).catch(err=>{
+    console.error(err);
+    setSyncStatus("Could not load data","text-red-300");
+  });
+});
 </script>
 </body>
-  </html>
+</html>
